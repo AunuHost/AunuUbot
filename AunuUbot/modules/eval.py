@@ -10,6 +10,31 @@ import psutil
 
 from AunuUbot import *
 
+REPO_URL = "https://github.com/AunuHost/AunuUbot.git"
+
+
+def get_repo_branch():
+    try:
+        out = subprocess.check_output(
+            ["git", "ls-remote", "--symref", REPO_URL, "HEAD"],
+            stderr=subprocess.STDOUT,
+        ).decode("utf-8", "replace")
+        for line in out.splitlines():
+            if line.startswith("ref: ") and "\tHEAD" in line:
+                return line.split()[1].split("/")[-1]
+    except Exception:
+        pass
+    return "main"
+
+
+def git_pull_repo():
+    branch = get_repo_branch()
+    return subprocess.check_output(
+        ["git", "pull", REPO_URL, branch],
+        stderr=subprocess.STDOUT,
+    ).decode("utf-8", "replace")
+
+
 async def cukimay(client, message):
     if message.from_user.id != OWNER_ID:
         await message.reply_text(f"\nmau ngapain anjenk?\n")
@@ -50,7 +75,10 @@ async def cb_restart(client, callback_query):
 @PY.CALLBACK("cb_gitpull")
 async def cb_gitpull(client, callback_query):
     await callback_query.message.delete()
-    os.system(f"kill -9 {os.getpid()} && git pull && python3 -m AunuUbot")
+    branch = get_repo_branch()
+    os.system(
+        f"kill -9 {os.getpid()} && git pull {REPO_URL} {branch} && python3 -m AunuUbot"
+    )
     
 async def handle_shutdown(message):
     await message.reply("✅ System berhasil dimatikan", quote=True)
@@ -63,7 +91,7 @@ async def handle_restart(message):
 
 
 async def handle_update(message):
-    out = subprocess.check_output(["git", "pull"]).decode("UTF-8")
+    out = git_pull_repo()
     if "Already up to date." in str(out):
         return await message.reply(out, quote=True)
     elif int(len(str(out))) > 4096:
