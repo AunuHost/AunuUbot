@@ -1,10 +1,10 @@
-import asyncio
 import base64
 import asyncio
 import math
-import string
 import os
+import re
 import shlex
+import string
 import textwrap
 
 from io import BytesIO
@@ -48,6 +48,8 @@ async def extract_userid(message, text):
         return True
 
     text = text.strip()
+    text = re.sub(r"^(?:https?://)?t\.me/", "", text, flags=re.IGNORECASE)
+    text = text.lstrip("@").split("/", 1)[0]
 
     if is_int(text):
         return int(text)
@@ -58,11 +60,21 @@ async def extract_userid(message, text):
     if entities is not None and len(entities) > 0:
         entity = entities[1 if message.text.startswith("/") else 0]
         if entity.type == enums.MessageEntityType.MENTION:
-            user = await app.get_users(text)
+            try:
+                user = await app.get_users(text)
+            except (UsernameInvalid, PeerIdInvalid, UsernameNotOccupied):
+                return None
             if user is not None:
                 return user.id
         elif entity.type == enums.MessageEntityType.TEXT_MENTION:
             return entity.user.id
+
+    try:
+        user = await app.get_users(text)
+    except (UsernameInvalid, PeerIdInvalid, UsernameNotOccupied):
+        return None
+    if user is not None:
+        return user.id
 
     return None
 
@@ -437,5 +449,3 @@ async def dl_pic(client, download):
     os.remove(path)
     get_photo = BytesIO(content)
     return get_photo
-
-
