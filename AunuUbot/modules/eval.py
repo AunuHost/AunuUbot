@@ -29,10 +29,15 @@ def get_repo_branch():
 
 def git_pull_repo():
     branch = get_repo_branch()
-    return subprocess.check_output(
-        ["git", "pull", REPO_URL, branch],
+    fetch_out = subprocess.check_output(
+        ["git", "fetch", REPO_URL, branch],
         stderr=subprocess.STDOUT,
     ).decode("utf-8", "replace")
+    reset_out = subprocess.check_output(
+        ["git", "reset", "--hard", "FETCH_HEAD"],
+        stderr=subprocess.STDOUT,
+    ).decode("utf-8", "replace")
+    return f"{fetch_out}\n{reset_out}".strip()
 
 
 async def cukimay(client, message):
@@ -77,7 +82,7 @@ async def cb_gitpull(client, callback_query):
     await callback_query.message.delete()
     branch = get_repo_branch()
     os.system(
-        f"kill -9 {os.getpid()} && git pull {REPO_URL} {branch} && python3 -m AunuUbot"
+        f"kill -9 {os.getpid()} && git fetch {REPO_URL} {branch} && git reset --hard FETCH_HEAD && python3 -m AunuUbot"
     )
     
 async def handle_shutdown(message):
