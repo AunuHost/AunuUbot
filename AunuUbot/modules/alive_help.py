@@ -23,6 +23,43 @@ def inline_disabled(error):
     return "BOT_INLINE_DISABLED" in str(error)
 
 
+async def build_help_overview_text(client, user):
+    SH = await ubot.get_prefix(user.id)
+    return (
+        f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={user.id}>"
+        f"{user.first_name} {user.last_name or ''}</a>\n"
+        f"★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n"
+        f"  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
+    )
+
+
+async def send_help_overview(client, message):
+    text = await build_help_overview_text(client, message.from_user)
+    buttons = InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help"))
+    help_photo = await get_vars(client.me.id, "HELP_PHOTO")
+    if help_photo:
+        return await message.reply_photo(
+            help_photo,
+            caption=text,
+            quote=True,
+            reply_markup=buttons,
+        )
+    return await message.reply(text, quote=True, reply_markup=buttons)
+
+
+async def edit_help_page(callback_query, text, buttons):
+    if getattr(callback_query, "message", None) and getattr(callback_query.message, "photo", None):
+        return await callback_query.edit_message_caption(
+            caption=text,
+            reply_markup=buttons,
+        )
+    return await callback_query.edit_message_text(
+        text=text,
+        reply_markup=buttons,
+        disable_web_page_preview=True,
+    )
+
+
 async def build_alive_text(client, owner_client):
     try:
         peer = owner_client._get_my_peer[owner_client.me.id]
@@ -175,26 +212,16 @@ async def _(client, callback_query):
 @PY.UBOT("help")
 async def user_help(client, message):
     if not get_arg(message):
+        help_photo = await get_vars(client.me.id, "HELP_PHOTO")
+        if help_photo:
+            return await send_help_overview(client, message)
         try:
             x = await client.get_inline_bot_results(bot.me.username, "user_help")
             await message.reply_inline_bot_result(x.query_id, x.results[0].id)
         except Exception as error:
             if not inline_disabled(error):
                 return await message.reply(error)
-            SH = await ubot.get_prefix(client.me.id)
-            msg = (
-                f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={message.from_user.id}>"
-                f"{message.from_user.first_name} {message.from_user.last_name or ''}</a>\n"
-                f"★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n"
-                f"  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
-            )
-            await message.reply(
-                msg,
-                quote=True,
-                reply_markup=InlineKeyboardMarkup(
-                    paginate_modules(0, HELP_COMMANDS, "help")
-                ),
-            )
+            await send_help_overview(client, message)
     else:
         module = (get_arg(message))
         if get_arg(message) in HELP_COMMANDS:
@@ -233,8 +260,7 @@ async def _(client, message):
 
 @PY.INLINE("^user_help")
 async def user_help_inline(client, inline_query):
-    SH = await ubot.get_prefix(inline_query.from_user.id)
-    msg = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={inline_query.from_user.id}>{inline_query.from_user.first_name} {inline_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
+    msg = await build_help_overview_text(client, inline_query.from_user)
     results = [InlineQueryResultArticle(
         title="Help Menu!",
         reply_markup=InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help")),
@@ -259,35 +285,34 @@ async def help_callback(client, callback_query):
     tutup_match = re.match(r"help_tutup\((.+?)\)", callback_query.data)
     back_match = re.match(r"help_back", callback_query.data)
     SH = await ubot.get_prefix(callback_query.from_user.id)
-    top_text = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={callback_query.from_user.id}>{callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
+    top_text = await build_help_overview_text(client, callback_query.from_user)
 
     if mod_match:
         module = (mod_match.group(1)).replace(" ", "_")
         text = HELP_COMMANDS[module].__HELP__.format(next((p) for p in SH))
         button = [[InlineKeyboardButton("⊲ ʙᴀᴄᴋ", callback_data="help_back")]]
-        await callback_query.edit_message_text(
-            text=text 
-            + '\n<blockquote><b>-- USERBOT 15K/BULAN BY @AunuHostv --</b></blockquote>',
-            reply_markup=InlineKeyboardMarkup(button),
-            disable_web_page_preview=True,
+        await edit_help_page(
+            callback_query,
+            text + '\n<blockquote><b>-- USERBOT 15K/BULAN BY @AunuHostv --</b></blockquote>',
+            InlineKeyboardMarkup(button),
         )
     elif prev_match:
         curr_page = int(prev_match.group(1))
-        await callback_query.edit_message_text(
+        await edit_help_page(
+            callback_query,
             top_text,
-            reply_markup=InlineKeyboardMarkup(paginate_modules(curr_page - 1, HELP_COMMANDS, "help")),
-            disable_web_page_preview=True,
+            InlineKeyboardMarkup(paginate_modules(curr_page - 1, HELP_COMMANDS, "help")),
         )
     elif next_match:
         next_page = int(next_match.group(1))
-        await callback_query.edit_message_text(
-            text=top_text,
-            reply_markup=InlineKeyboardMarkup(paginate_modules(next_page + 1, HELP_COMMANDS, "help")),
-            disable_web_page_preview=True,
+        await edit_help_page(
+            callback_query,
+            top_text,
+            InlineKeyboardMarkup(paginate_modules(next_page + 1, HELP_COMMANDS, "help")),
         )
     elif back_match:
-        await callback_query.edit_message_text(
-            text=top_text,
-            reply_markup=InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help")),
-            disable_web_page_preview=True,
+        await edit_help_page(
+            callback_query,
+            top_text,
+            InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help")),
         )
