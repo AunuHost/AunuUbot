@@ -1,6 +1,7 @@
 import asyncio
 import importlib
 from datetime import datetime
+from time import monotonic
 
 from pyrogram.enums import SentCodeType
 from pyrogram.errors import *
@@ -9,53 +10,92 @@ from pyrogram.raw import functions
 
 from AunuUbot import *
 
+START_DEDUP = {}
+
+
+async def get_access_flags(client, user_id):
+    admin_users = await get_list_from_vars(client.me.id, "ADMIN_USERS")
+    seller_users = await get_list_from_vars(client.me.id, "SELER_USERS")
+    premium_users = await get_list_from_vars(client.me.id, "PREM_USERS")
+    ultra_premium_users = await get_list_from_vars(client.me.id, "ULTRA_PREM")
+    return {
+        "owner": user_id == OWNER_ID,
+        "admin": user_id in admin_users,
+        "seller": user_id in seller_users,
+        "premium": user_id in premium_users or user_id in ultra_premium_users,
+    }
+
+
+def get_access_label(flags):
+    if flags["owner"]:
+        return "owner"
+    if flags["admin"]:
+        return "admin"
+    if flags["seller"]:
+        return "seller"
+    if flags["premium"]:
+        return "premium"
+    return "free"
+
+
+def has_build_access(flags):
+    return any(flags.values())
+
 
 @PY.BOT("start")
 @PY.START
 @PY.PRIVATE
 async def _(client, message):
+    key = (message.chat.id, message.from_user.id if message.from_user else message.chat.id)
+    now = monotonic()
+    if now - START_DEDUP.get(key, 0) < 5:
+        return
+    START_DEDUP[key] = now
     buttons = BTN.START(message)
     msg = MSG.START(message)
-    await message.reply(
-        msg,
-        reply_markup=InlineKeyboardMarkup(buttons))
+    try:
+        await message.reply(
+            msg,
+            reply_markup=InlineKeyboardMarkup(buttons))
+    except Exception:
+        return
 
 
 @PY.CALLBACK("bahan")
 async def _(client, callback_query):
     user_id = callback_query.from_user.id
+    access = await get_access_flags(client, user_id)
     if user_id in ubot._get_my_id:
         buttons = [
-            [InlineKeyboardButton("ʀᴇꜱᴛᴀʀᴛ", callback_data=f"ress_ubot")],
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("Ê€á´‡êœ±á´›á´€Ê€á´›", callback_data=f"ress_ubot")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b>ᴀɴᴅᴀ ꜱᴜᴅᴀʜ ᴍᴇᴍʙᴜᴀᴛ ᴜꜱᴇʀʙᴏᴛ\n\nᴊɪᴋᴀ ᴜꜱᴇʀʙᴏᴛ ᴀɴᴅᴀ ᴛɪᴅᴀᴋ ʙɪꜱᴀ ᴅɪɢᴜɴᴀᴋᴀɴ ꜱɪʟᴀʜᴋᴀɴ ᴛᴇᴋᴇɴ ᴛᴏᴍʙᴏʟ ʀᴇꜱᴛᴀʀᴛ ᴅɪ ᴀᴛᴀꜱ</b></blockquote>
+<blockquote><b>á´€É´á´…á´€ êœ±á´œá´…á´€Êœ á´á´‡á´Ê™á´œá´€á´› á´œêœ±á´‡Ê€Ê™á´á´›\n\ná´ŠÉªá´‹á´€ á´œêœ±á´‡Ê€Ê™á´á´› á´€É´á´…á´€ á´›Éªá´…á´€á´‹ Ê™Éªêœ±á´€ á´…ÉªÉ¢á´œÉ´á´€á´‹á´€É´ êœ±ÉªÊŸá´€Êœá´‹á´€É´ á´›á´‡á´‹á´‡É´ á´›á´á´Ê™á´ÊŸ Ê€á´‡êœ±á´›á´€Ê€á´› á´…Éª á´€á´›á´€êœ±</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     elif len(ubot._ubot) + 1 > MAX_BOT:
         buttons = [
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b><b>❌ ᴛɪᴅᴀᴋ ʙɪsᴀ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ!</b>
+<blockquote><b><b>âŒ á´›Éªá´…á´€á´‹ Ê™Éªsá´€ á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€Ê™á´á´›!</b>
 
-<b>📚 ᴋᴀʀᴇɴᴀ ᴍᴀᴋsɪᴍᴀʟ ᴜsᴇʀʙᴏᴛ ᴀᴅᴀʟᴀʜ {Fonts.smallcap(str(len(ubot._ubot)))} ᴛᴇʟᴀʜ ᴛᴇʀᴄᴀᴘᴀɪ</b>
+<b>ðŸ“š á´‹á´€Ê€á´‡É´á´€ á´á´€á´‹sÉªá´á´€ÊŸ á´œsá´‡Ê€Ê™á´á´› á´€á´…á´€ÊŸá´€Êœ {Fonts.smallcap(str(len(ubot._ubot)))} á´›á´‡ÊŸá´€Êœ á´›á´‡Ê€á´„á´€á´˜á´€Éª</b>
 
-<b>☎️ sɪʟᴀʜᴋᴀɴ ʜᴜʙᴜɴɢɪ: <a href=tg://openmessage?user_id={OWNER_ID}>ᴀᴅᴍɪɴ</a>ᴊɪᴋᴀ ᴍᴀᴜ ᴅɪʙᴜᴀᴛᴋᴀɴ ʙᴏᴛ sᴇᴘᴇʀᴛɪ sᴀʏᴀ </b></blockquote>
+<b>â˜Žï¸ sÉªÊŸá´€Êœá´‹á´€É´ Êœá´œÊ™á´œÉ´É¢Éª: <a href=tg://openmessage?user_id={OWNER_ID}>á´€á´…á´ÉªÉ´</a>á´ŠÉªá´‹á´€ á´á´€á´œ á´…ÉªÊ™á´œá´€á´›á´‹á´€É´ Ê™á´á´› sá´‡á´˜á´‡Ê€á´›Éª sá´€Êá´€ </b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
-    premium_users, ultra_premium_users = await get_list_from_vars(client.me.id, "PREM_USERS"), await get_list_from_vars(client.me.id, "ULTRA_PREM")
-    if user_id not in premium_users and user_id not in ultra_premium_users:
+    if not has_build_access(access):
         buttons = [
-            [InlineKeyboardButton("ʟᴀɴᴊᴜᴛᴋᴀɴ", callback_data="bayar_dulu")],
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("ÊŸá´€É´á´Šá´œá´›á´‹á´€É´", callback_data="bayar_dulu")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             MSG.POLICY(),
@@ -63,44 +103,49 @@ async def _(client, callback_query):
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
-        buttons = [[InlineKeyboardButton("✅ ʟᴀɴᴊᴜᴛᴋᴀɴ", callback_data="buat_ubot")]]
+        buttons = [[InlineKeyboardButton("âœ… ÊŸá´€É´á´Šá´œá´›á´‹á´€É´", callback_data="buat_ubot")]]
         return await callback_query.edit_message_text(
             """
-<blockquote><b>ᴀɴᴅᴀ ᴛᴇʟᴀʜ ᴍᴇᴍʙᴇʟɪ ᴜꜱᴇʀʙᴏᴛ ꜱɪʟᴀʜᴋᴀɴ ᴘᴇɴᴄᴇᴛ ᴛᴏᴍʙᴏʟ ʟᴀɴᴊᴜᴛᴋᴀɴ ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴜᴀᴛ ᴜꜱᴇʀʙᴏᴛ</b></blockquote>
+<blockquote><b>á´€É´á´…á´€ á´›á´‡ÊŸá´€Êœ á´á´‡á´Ê™á´‡ÊŸÉª á´œêœ±á´‡Ê€Ê™á´á´› êœ±ÉªÊŸá´€Êœá´‹á´€É´ á´˜á´‡É´á´„á´‡á´› á´›á´á´Ê™á´ÊŸ ÊŸá´€É´á´Šá´œá´›á´‹á´€É´ á´œÉ´á´›á´œá´‹ á´á´‡á´Ê™á´œá´€á´› á´œêœ±á´‡Ê€Ê™á´á´›</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
 
 
+
 @PY.CALLBACK("status")
 async def _(client, callback_query):
     user_id = callback_query.from_user.id
-    if user_id in ubot._get_my_id:
+    access = await get_access_flags(client, user_id)
+    if user_id in ubot._get_my_id or has_build_access(access):
         buttons = [
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("back", callback_data=f"home {user_id}")],
         ]
         exp = await get_expired_date(user_id)
         prefix = await get_pref(user_id)
         waktu = exp.strftime("%d-%m-%Y") if exp else "None"
+        status = get_access_label(access)
+        if status == "free":
+            status = "premium"
         return await callback_query.edit_message_text(
             f"""
 <blockquote>AunuHost
-  ꜱᴛᴀᴛᴜꜱ : ᴘʀᴇᴍɪᴜᴍ
-  ᴘʀᴇꜰɪxᴇꜱ : {prefix[0]}
-  ᴇxᴘɪʀᴇᴅ_ᴏɴ : {waktu}</b></blockquote>
+  status : {status}
+  prefix : {prefix[0]}
+  expired_on : {waktu}</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
         buttons = [
-            [InlineKeyboardButton("💵 ʙᴇʟɪ ᴜꜱᴇʀʙᴏᴛ", callback_data=f"bahan")],
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("buy userbot", callback_data="bahan")],
+            [InlineKeyboardButton("back", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
-            f"""
-<blockquote><b>❌ ᴍᴀᴀꜰ ᴀɴᴅᴀ ʙᴇʟᴜᴍ ᴍᴇᴍʙᴇʟɪ ᴜꜱᴇʀʙᴏᴛ, ꜱɪʟᴀᴋᴀɴ ᴍᴇᴍʙᴇʟɪ ᴛᴇʀʟᴇʙɪʜ ᴅᴀʜᴜʟᴜ.</b></blockquote>
+            """
+<blockquote><b>Sorry, kamu belum punya akses userbot. Silakan beli dulu atau hubungi admin.</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -110,55 +155,55 @@ async def _(client, callback_query):
 @PY.CALLBACK("buat_ubot")
 async def _(client, callback_query):
     user_id = callback_query.from_user.id
+    access = await get_access_flags(client, user_id)
     if user_id in ubot._get_my_id:
         buttons = [
-            [InlineKeyboardButton("✅ ʀᴇꜱᴛᴀʀᴛ", callback_data=f"ress_ubot")],
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("âœ… Ê€á´‡êœ±á´›á´€Ê€á´›", callback_data=f"ress_ubot")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b>ᴀɴᴅᴀ ꜱᴜᴅᴀʜ ᴍᴇᴍʙᴜᴀᴛ ᴜꜱᴇʀʙᴏᴛ\n\nᴊɪᴋᴀ ᴜꜱᴇʀʙᴏᴛ ᴀɴᴅᴀ ᴛɪᴅᴀᴋ ʙɪꜱᴀ ᴅɪɢᴜɴᴀᴋᴀɴ ꜱɪʟᴀʜᴋᴀɴ ᴛᴇᴋᴇɴ ᴛᴏᴍʙᴏʟ ʀᴇꜱᴛᴀʀᴛ ᴅɪ ᴀᴛᴀꜱ</b></blockquote>
+<blockquote><b>á´€É´á´…á´€ êœ±á´œá´…á´€Êœ á´á´‡á´Ê™á´œá´€á´› á´œêœ±á´‡Ê€Ê™á´á´›\n\ná´ŠÉªá´‹á´€ á´œêœ±á´‡Ê€Ê™á´á´› á´€É´á´…á´€ á´›Éªá´…á´€á´‹ Ê™Éªêœ±á´€ á´…ÉªÉ¢á´œÉ´á´€á´‹á´€É´ êœ±ÉªÊŸá´€Êœá´‹á´€É´ á´›á´‡á´‹á´‡É´ á´›á´á´Ê™á´ÊŸ Ê€á´‡êœ±á´›á´€Ê€á´› á´…Éª á´€á´›á´€êœ±</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     elif len(ubot._ubot) + 1 > MAX_BOT:
         buttons = [
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b><b>❌ ᴛɪᴅᴀᴋ ʙɪsᴀ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ!</b>
+<blockquote><b><b>âŒ á´›Éªá´…á´€á´‹ Ê™Éªsá´€ á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€Ê™á´á´›!</b>
 
-<b>📚 ᴋᴀʀᴇɴᴀ ᴍᴀᴋsɪᴍᴀʟ ᴜsᴇʀʙᴏᴛ ᴀᴅᴀʟᴀʜ {Fonts.smallcap(str(len(ubot._ubot)))} ᴛᴇʟᴀʜ ᴛᴇʀᴄᴀᴘᴀɪ</b>
+<b>ðŸ“š á´‹á´€Ê€á´‡É´á´€ á´á´€á´‹sÉªá´á´€ÊŸ á´œsá´‡Ê€Ê™á´á´› á´€á´…á´€ÊŸá´€Êœ {Fonts.smallcap(str(len(ubot._ubot)))} á´›á´‡ÊŸá´€Êœ á´›á´‡Ê€á´„á´€á´˜á´€Éª</b>
 
-<b>☎️ sɪʟᴀʜᴋᴀɴ ʜᴜʙᴜɴɢɪ: <a href=tg://openmessage?user_id={OWNER_ID}>ᴀᴅᴍɪɴ</a>ᴊɪᴋᴀ ᴍᴀᴜ ᴅɪʙᴜᴀᴛᴋᴀɴ ʙᴏᴛ sᴇᴘᴇʀᴛɪ sᴀʏᴀ </b></blockquote>
+<b>â˜Žï¸ sÉªÊŸá´€Êœá´‹á´€É´ Êœá´œÊ™á´œÉ´É¢Éª: <a href=tg://openmessage?user_id={OWNER_ID}>á´€á´…á´ÉªÉ´</a>á´ŠÉªá´‹á´€ á´á´€á´œ á´…ÉªÊ™á´œá´€á´›á´‹á´€É´ Ê™á´á´› sá´‡á´˜á´‡Ê€á´›Éª sá´€Êá´€ </b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
-    premium_users, ultra_premium_users = await get_list_from_vars(client.me.id, "PREM_USERS"), await get_list_from_vars(client.me.id, "ULTRA_PREM")
-    if user_id not in premium_users and user_id not in ultra_premium_users:
+    if not has_build_access(access):
         buttons = [
-            [InlineKeyboardButton("💸 ʙᴇʟɪ ᴜꜱᴇʀʙᴏᴛ 💸", callback_data="bahan")],
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("ðŸ’¸ Ê™á´‡ÊŸÉª á´œêœ±á´‡Ê€Ê™á´á´› ðŸ’¸", callback_data="bahan")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b>❌ ᴍᴀᴀꜰ ᴀɴᴅᴀ ʙᴇʟᴜᴍ ᴍᴇᴍʙᴇʟɪ ᴜꜱᴇʀʙᴏᴛ, ꜱɪʟᴀᴋᴀɴ ᴍᴇᴍʙᴇʟɪ ᴛᴇʀʟᴇʙɪʜ ᴅᴀʜᴜʟᴜ</b></blockquote>
+<blockquote><b>âŒ á´á´€á´€êœ° á´€É´á´…á´€ Ê™á´‡ÊŸá´œá´ á´á´‡á´Ê™á´‡ÊŸÉª á´œêœ±á´‡Ê€Ê™á´á´›, êœ±ÉªÊŸá´€á´‹á´€É´ á´á´‡á´Ê™á´‡ÊŸÉª á´›á´‡Ê€ÊŸá´‡Ê™ÉªÊœ á´…á´€Êœá´œÊŸá´œ</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
-        buttons = [[InlineKeyboardButton("✅ ʟᴀɴᴊᴜᴛᴋᴀɴ", callback_data="add_ubot")]]
+        buttons = [[InlineKeyboardButton("âœ… ÊŸá´€É´á´Šá´œá´›á´‹á´€É´", callback_data="add_ubot")]]
         return await callback_query.edit_message_text(
             """
-<blockquote><b>✅ ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀsʙᴏᴛ sɪᴀᴘᴋᴀɴ ʙᴀʜᴀɴ ʙᴇʀɪᴋᴜᴛ
+<blockquote><b>âœ… á´œÉ´á´›á´œá´‹ á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€sÊ™á´á´› sÉªá´€á´˜á´‹á´€É´ Ê™á´€Êœá´€É´ Ê™á´‡Ê€Éªá´‹á´œá´›
 
-    � <code>ᴘʜᴏɴᴇ_ɴᴜᴍʙᴇʀ</code>: ɴᴏᴍᴇʀ ʜᴘ ᴀᴋᴜɴ ᴛᴇʟᴇɢʀᴀᴍ
+    ï¿½ <code>á´˜Êœá´É´á´‡_É´á´œá´Ê™á´‡Ê€</code>: É´á´á´á´‡Ê€ Êœá´˜ á´€á´‹á´œÉ´ á´›á´‡ÊŸá´‡É¢Ê€á´€á´
 
-☑️ ᴊɪᴋᴀ sᴜᴅᴀʜ ᴛᴇʀsᴇᴅɪᴀ sɪʟᴀʜᴋᴀɴ ᴋʟɪᴋ ᴛᴏᴍʙᴏɪ ᴅɪʙᴀᴡᴀʜ</b></blockquote>
+â˜‘ï¸ á´ŠÉªá´‹á´€ sá´œá´…á´€Êœ á´›á´‡Ê€sá´‡á´…Éªá´€ sÉªÊŸá´€Êœá´‹á´€É´ á´‹ÊŸÉªá´‹ á´›á´á´Ê™á´Éª á´…ÉªÊ™á´€á´¡á´€Êœ</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -184,13 +229,13 @@ async def _(client, callback_query):
         phone = await bot.ask(
             user_id,
             (
-                "<b>sɪʟᴀʜᴋᴀɴ ᴍᴀsᴜᴋᴋᴀɴ ɴᴏᴍᴏʀ ᴛᴇʟᴇᴘᴏɴ ᴛᴇʟᴇɢʀᴀᴍ ᴀɴᴅᴀ ᴅᴇɴɢᴀɴ ꜰᴏʀᴍᴀᴛ ᴋᴏᴅᴇ ɴᴇɢᴀʀᴀ.\nᴄᴏɴᴛᴏʜ: +628xxxxxxx</b>\n"
-                "\n<b>ɢᴜɴᴀᴋᴀɴ /cancel ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴀᴛᴀʟᴋᴀɴ ᴘʀᴏsᴇs ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ</b>"
+                "<b>sÉªÊŸá´€Êœá´‹á´€É´ á´á´€sá´œá´‹á´‹á´€É´ É´á´á´á´Ê€ á´›á´‡ÊŸá´‡á´˜á´É´ á´›á´‡ÊŸá´‡É¢Ê€á´€á´ á´€É´á´…á´€ á´…á´‡É´É¢á´€É´ êœ°á´Ê€á´á´€á´› á´‹á´á´…á´‡ É´á´‡É¢á´€Ê€á´€.\ná´„á´É´á´›á´Êœ: +628xxxxxxx</b>\n"
+                "\n<b>É¢á´œÉ´á´€á´‹á´€É´ /cancel á´œÉ´á´›á´œá´‹ á´á´‡á´Ê™á´€á´›á´€ÊŸá´‹á´€É´ á´˜Ê€á´sá´‡s á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€Ê™á´á´›</b>"
             ),
             timeout=300,
         )
     except asyncio.TimeoutError:
-        return await bot.send_message(user_id, "<blockquote>ᴘᴇᴍʙᴀᴛᴀʟᴀɴ ᴏᴛᴏᴍᴀᴛɪꜱ!\nɴɢᴜɴᴀᴋᴀɴ /ꜱᴛᴀʀᴛ ᴜɴᴛᴜᴋ ᴍᴇᴍᴜʟᴀɪ ᴜʟᴀɴɢ</blockquote>")
+        return await bot.send_message(user_id, "<blockquote>á´˜á´‡á´Ê™á´€á´›á´€ÊŸá´€É´ á´á´›á´á´á´€á´›Éªêœ±!\nÉ´É¢á´œÉ´á´€á´‹á´€É´ /êœ±á´›á´€Ê€á´› á´œÉ´á´›á´œá´‹ á´á´‡á´á´œÊŸá´€Éª á´œÊŸá´€É´É¢</blockquote>")
     if await is_cancel(callback_query, phone.text):
         return
     phone_number = phone.text
@@ -200,7 +245,7 @@ async def _(client, callback_query):
         api_hash=API_HASH,
         in_memory=False,
     )
-    get_otp = await bot.send_message(user_id, "<blockquote><b>ᴍᴇɴɢɪʀɪᴍ ᴋᴏᴅᴇ ᴏᴛᴘ...</b></blockquote>")
+    get_otp = await bot.send_message(user_id, "<blockquote><b>á´á´‡É´É¢ÉªÊ€Éªá´ á´‹á´á´…á´‡ á´á´›á´˜...</b></blockquote>")
     await new_client.connect()
     try:
         code = await new_client.send_code(phone_number.strip())
@@ -224,25 +269,25 @@ async def _(client, callback_query):
         return await bot.send_message(user_id, f"ERROR: {error}")
     try:
         sent_code = {
-            SentCodeType.APP: "<a href=tg://openmessage?user_id=777000>ᴀᴋᴜɴ ᴛᴇʟᴇɢʀᴀᴍ</a> ʀᴇsᴍɪ",
-            SentCodeType.SMS: "sᴍs ᴀɴᴅᴀ",
-            SentCodeType.CALL: "ᴘᴀɴɢɢɪʟᴀɴ ᴛᴇʟᴘᴏɴ",
-            SentCodeType.FLASH_CALL: "ᴘᴀɴɢɢɪʟᴀɴ ᴋɪʟᴀᴛ ᴛᴇʟᴇᴘᴏɴ",
-            SentCodeType.FRAGMENT_SMS: "ꜰʀᴀɢᴍᴇɴᴛ sᴍs",
-            SentCodeType.EMAIL_CODE: "ᴇᴍᴀɪʟ ᴀɴᴅᴀ",
+            SentCodeType.APP: "<a href=tg://openmessage?user_id=777000>á´€á´‹á´œÉ´ á´›á´‡ÊŸá´‡É¢Ê€á´€á´</a> Ê€á´‡sá´Éª",
+            SentCodeType.SMS: "sá´s á´€É´á´…á´€",
+            SentCodeType.CALL: "á´˜á´€É´É¢É¢ÉªÊŸá´€É´ á´›á´‡ÊŸá´˜á´É´",
+            SentCodeType.FLASH_CALL: "á´˜á´€É´É¢É¢ÉªÊŸá´€É´ á´‹ÉªÊŸá´€á´› á´›á´‡ÊŸá´‡á´˜á´É´",
+            SentCodeType.FRAGMENT_SMS: "êœ°Ê€á´€É¢á´á´‡É´á´› sá´s",
+            SentCodeType.EMAIL_CODE: "á´‡á´á´€ÉªÊŸ á´€É´á´…á´€",
         }
         await get_otp.delete()
         otp = await bot.ask(
             user_id,
             (
-                "<b>sɪʟᴀᴋᴀɴ ᴘᴇʀɪᴋsᴀ ᴋᴏᴅᴇ ᴏᴛᴘ ᴅᴀʀɪ ᴀᴋᴜɴ ʀᴇꜱᴍɪ ᴛᴇʟᴇɢʀᴀᴍ. ᴋɪʀɪᴍ ᴋᴏᴅᴇ ᴏᴛᴘ ᴋᴇ sɪɴɪ sᴇᴛᴇʟᴀʜ ᴍᴇᴍʙᴀᴄᴀ ꜰᴏʀᴍᴀᴛ ᴅɪ ʙᴀᴡᴀʜ ɪɴɪ.</b>\n"
-                "\nᴊɪᴋᴀ ᴋᴏᴅᴇ ᴏᴛᴘ ᴀᴅᴀʟᴀʜ <ᴄᴏᴅᴇ>12345</ᴄᴏᴅᴇ> ᴛᴏʟᴏɴɢ <b>[ ᴛᴀᴍʙᴀʜᴋᴀɴ sᴘᴀsɪ ]</b> ᴋɪʀɪᴍᴋᴀɴ sᴇᴘᴇʀᴛɪ ɪɴɪ <code>1 2 3 4 5</code>\n"
-                "\n<b>ɢᴜɴᴀᴋᴀɴ /cancel ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴀᴛᴀʟᴋᴀɴ ᴘʀᴏsᴇs ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ</b>"
+                "<b>sÉªÊŸá´€á´‹á´€É´ á´˜á´‡Ê€Éªá´‹sá´€ á´‹á´á´…á´‡ á´á´›á´˜ á´…á´€Ê€Éª á´€á´‹á´œÉ´ Ê€á´‡êœ±á´Éª á´›á´‡ÊŸá´‡É¢Ê€á´€á´. á´‹ÉªÊ€Éªá´ á´‹á´á´…á´‡ á´á´›á´˜ á´‹á´‡ sÉªÉ´Éª sá´‡á´›á´‡ÊŸá´€Êœ á´á´‡á´Ê™á´€á´„á´€ êœ°á´Ê€á´á´€á´› á´…Éª Ê™á´€á´¡á´€Êœ ÉªÉ´Éª.</b>\n"
+                "\ná´ŠÉªá´‹á´€ á´‹á´á´…á´‡ á´á´›á´˜ á´€á´…á´€ÊŸá´€Êœ <á´„á´á´…á´‡>12345</á´„á´á´…á´‡> á´›á´ÊŸá´É´É¢ <b>[ á´›á´€á´Ê™á´€Êœá´‹á´€É´ sá´˜á´€sÉª ]</b> á´‹ÉªÊ€Éªá´á´‹á´€É´ sá´‡á´˜á´‡Ê€á´›Éª ÉªÉ´Éª <code>1 2 3 4 5</code>\n"
+                "\n<b>É¢á´œÉ´á´€á´‹á´€É´ /cancel á´œÉ´á´›á´œá´‹ á´á´‡á´Ê™á´€á´›á´€ÊŸá´‹á´€É´ á´˜Ê€á´sá´‡s á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€Ê™á´á´›</b>"
             ),
             timeout=300,
         )
     except asyncio.TimeoutError:
-        return await bot.send_message(user_id, "<blockquote>ᴘᴇᴍʙᴀᴛᴀʟᴀɴ ᴏᴛᴏᴍᴀᴛɪꜱ!\nɴɢᴜɴᴀᴋᴀɴ /ꜱᴛᴀʀᴛ ᴜɴᴛᴜᴋ ᴍᴇᴍᴜʟᴀɪ ᴜʟᴀɴɢ</blockquote>")
+        return await bot.send_message(user_id, "<blockquote>á´˜á´‡á´Ê™á´€á´›á´€ÊŸá´€É´ á´á´›á´á´á´€á´›Éªêœ±!\nÉ´É¢á´œÉ´á´€á´‹á´€É´ /êœ±á´›á´€Ê€á´› á´œÉ´á´›á´œá´‹ á´á´‡á´á´œÊŸá´€Éª á´œÊŸá´€É´É¢</blockquote>")
     if await is_cancel(callback_query, otp.text):
         return
     otp_code = otp.text
@@ -262,11 +307,11 @@ async def _(client, callback_query):
         try:
             two_step_code = await bot.ask(
                 user_id,
-                "ᴀᴋᴜɴ ᴀɴᴅᴀ ᴛᴇʟᴀʜ ᴍᴇɴɢᴀᴋᴛɪꜰᴋᴀɴ ᴠᴇʀɪꜰɪᴋᴀsɪ ᴅᴜᴀ ʟᴀɴɢᴋᴀʜ. sɪʟᴀʜᴋᴀɴ ᴋɪʀɪᴍᴋᴀɴ ᴘᴀssᴡᴏʀᴅɴʏᴀ.\n\nɢᴜɴᴀᴋᴀɴ /cancel ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴀᴛᴀʟᴋᴀɴ ᴘʀᴏsᴇs ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ</b>",
+                "á´€á´‹á´œÉ´ á´€É´á´…á´€ á´›á´‡ÊŸá´€Êœ á´á´‡É´É¢á´€á´‹á´›Éªêœ°á´‹á´€É´ á´ á´‡Ê€Éªêœ°Éªá´‹á´€sÉª á´…á´œá´€ ÊŸá´€É´É¢á´‹á´€Êœ. sÉªÊŸá´€Êœá´‹á´€É´ á´‹ÉªÊ€Éªá´á´‹á´€É´ á´˜á´€ssá´¡á´Ê€á´…É´Êá´€.\n\nÉ¢á´œÉ´á´€á´‹á´€É´ /cancel á´œÉ´á´›á´œá´‹ á´á´‡á´Ê™á´€á´›á´€ÊŸá´‹á´€É´ á´˜Ê€á´sá´‡s á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€Ê™á´á´›</b>",
                 timeout=300,
             )
         except asyncio.TimeoutError:
-            return await bot.send_message(user_id, "<blockquote>ᴘᴇᴍʙᴀᴛᴀʟᴀɴ ᴏᴛᴏᴍᴀᴛɪꜱ!\nɴɢᴜɴᴀᴋᴀɴ /ꜱᴛᴀʀᴛ ᴜɴᴛᴜᴋ ᴍᴇᴍᴜʟᴀɪ ᴜʟᴀɴɢ</blockquote>")
+            return await bot.send_message(user_id, "<blockquote>á´˜á´‡á´Ê™á´€á´›á´€ÊŸá´€É´ á´á´›á´á´á´€á´›Éªêœ±!\nÉ´É¢á´œÉ´á´€á´‹á´€É´ /êœ±á´›á´€Ê€á´› á´œÉ´á´›á´œá´‹ á´á´‡á´á´œÊŸá´€Éª á´œÊŸá´€É´É¢</blockquote>")
         if await is_cancel(callback_query, two_step_code.text):
             return
         new_code = two_step_code.text
@@ -280,14 +325,14 @@ async def _(client, callback_query):
     new_client.in_memory = False
     bot_msg = await bot.send_message(
         user_id,
-        "sᴇᴅᴀɴɢ ᴍᴇᴍᴘʀᴏsᴇs....\n\nsɪʟᴀʜᴋᴀɴ ᴛᴜɴɢɢᴜ sᴇʙᴇɴᴛᴀʀ",
+        "sá´‡á´…á´€É´É¢ á´á´‡á´á´˜Ê€á´sá´‡s....\n\nsÉªÊŸá´€Êœá´‹á´€É´ á´›á´œÉ´É¢É¢á´œ sá´‡Ê™á´‡É´á´›á´€Ê€",
         disable_web_page_preview=True,
     )
     await new_client.start()
     if not user_id == new_client.me.id:
         ubot._ubot.remove(new_client)
         return await bot_msg.edit(
-            "<b>ʜᴀʀᴀᴘ ɢᴜɴᴀᴋᴀɴ ɴᴏᴍᴇʀ ᴛᴇʟᴇɢʀᴀᴍ ᴀɴᴅᴀ ᴅɪ ᴀᴋᴜɴ ᴀɴᴅᴀ sᴀᴀᴛ ɪɴɪ ᴅᴀɴ ʙᴜᴋᴀɴ ɴᴏᴍᴇʀ ᴛᴇʟᴇɢʀᴀᴍ ᴅᴀʀɪ ᴀᴋᴜɴ ʟᴀɪɴ</>"
+            "<b>Êœá´€Ê€á´€á´˜ É¢á´œÉ´á´€á´‹á´€É´ É´á´á´á´‡Ê€ á´›á´‡ÊŸá´‡É¢Ê€á´€á´ á´€É´á´…á´€ á´…Éª á´€á´‹á´œÉ´ á´€É´á´…á´€ sá´€á´€á´› ÉªÉ´Éª á´…á´€É´ Ê™á´œá´‹á´€É´ É´á´á´á´‡Ê€ á´›á´‡ÊŸá´‡É¢Ê€á´€á´ á´…á´€Ê€Éª á´€á´‹á´œÉ´ ÊŸá´€ÉªÉ´</>"
         )
     await add_ubot(
         user_id=int(new_client.me.id),
@@ -300,14 +345,14 @@ async def _(client, callback_query):
         importlib.reload(importlib.import_module(f"AunuUbot.modules.{mod}"))
     SH = await ubot.get_prefix(new_client.me.id)
     buttons = [
-            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
         ]
     text_done = f"""
-<blockquote><b>ʙᴇʀʜᴀꜱɪʟ ᴅɪᴀᴋᴛɪꜰᴋᴀɴ
-ɴᴀᴍᴇ : <a href=tg://user?id={new_client.me.id}>{new_client.me.first_name} {new_client.me.last_name or ''}</a>
-ɪᴅ : {new_client.me.id}
-ᴘʀᴇꜰɪxᴇꜱ : {' '.join(SH)}
-ᴊɪᴋᴀ ʙᴏᴛ ᴛɪᴅᴀᴋ ʀᴇꜱᴘᴏɴ, ᴋᴇᴛɪᴋ /restart</b></blockquote>
+<blockquote><b>Ê™á´‡Ê€Êœá´€êœ±ÉªÊŸ á´…Éªá´€á´‹á´›Éªêœ°á´‹á´€É´
+É´á´€á´á´‡ : <a href=tg://user?id={new_client.me.id}>{new_client.me.first_name} {new_client.me.last_name or ''}</a>
+Éªá´… : {new_client.me.id}
+á´˜Ê€á´‡êœ°Éªxá´‡êœ± : {' '.join(SH)}
+á´ŠÉªá´‹á´€ Ê™á´á´› á´›Éªá´…á´€á´‹ Ê€á´‡êœ±á´˜á´É´, á´‹á´‡á´›Éªá´‹ /restart</b></blockquote>
         """
     await bot_msg.edit(text_done, disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons))
@@ -322,15 +367,15 @@ async def _(client, callback_query):
     return await bot.send_message(
         LOGS_MAKER_UBOT,
         f"""
-<b>❏ ᴜsᴇʀʙᴏᴛ ᴅɪᴀᴋᴛɪғᴋᴀɴ</b>
-<b> ├ ᴀᴋᴜɴ:</b> <a href=tg://user?id={new_client.me.id}>{new_client.me.first_name} {new_client.me.last_name or ''}</a> 
-<b> ╰ ɪᴅ:</b> <code>{new_client.me.id}</code>
+<b>â á´œsá´‡Ê€Ê™á´á´› á´…Éªá´€á´‹á´›ÉªÒ“á´‹á´€É´</b>
+<b> â”œ á´€á´‹á´œÉ´:</b> <a href=tg://user?id={new_client.me.id}>{new_client.me.first_name} {new_client.me.last_name or ''}</a> 
+<b> â•° Éªá´…:</b> <code>{new_client.me.id}</code>
 """,
         reply_markup=InlineKeyboardMarkup(
             [
                 [
                     InlineKeyboardButton(
-                        "📁 ᴄᴇᴋ ᴍᴀsᴀ ᴀᴋᴛɪғ 📁",
+                        "ðŸ“ á´„á´‡á´‹ á´á´€sá´€ á´€á´‹á´›ÉªÒ“ ðŸ“",
                         callback_data=f"cek_masa_aktif {new_client.me.id}",
                     )
                 ],
@@ -342,7 +387,7 @@ async def _(client, callback_query):
 async def is_cancel(callback_query, text):
     if text.startswith("/cancel"):
         await bot.send_message(
-            callback_query.from_user.id, "<blockquote>ᴘᴇᴍʙᴀᴛᴀʟᴀɴ ᴏᴛᴏᴍᴀᴛɪꜱ!\nɴɢᴜɴᴀᴋᴀɴ /ꜱᴛᴀʀᴛ ᴜɴᴛᴜᴋ ᴍᴇᴍᴜʟᴀɪ ᴜʟᴀɴɢ</blockquote>"
+            callback_query.from_user.id, "<blockquote>á´˜á´‡á´Ê™á´€á´›á´€ÊŸá´€É´ á´á´›á´á´á´€á´›Éªêœ±!\nÉ´É¢á´œÉ´á´€á´‹á´€É´ /êœ±á´›á´€Ê€á´› á´œÉ´á´›á´œá´‹ á´á´‡á´á´œÊŸá´€Éª á´œÊŸá´€É´É¢</blockquote>"
         )
         return True
     return False
@@ -351,11 +396,11 @@ async def is_cancel(callback_query, text):
 @PY.BOT("control")
 async def _(client, message):
     buttons = [
-            [InlineKeyboardButton("ʀᴇꜱᴛᴀʀᴛ", callback_data=f"ress_ubot")],
+            [InlineKeyboardButton("Ê€á´‡êœ±á´›á´€Ê€á´›", callback_data=f"ress_ubot")],
         ]
     await message.reply(
             f"""
-<blockquote><b>ᴀɴᴅᴀ ᴀᴋᴀɴ ᴍᴇʟᴀᴋᴜᴋᴀɴ ʀᴇꜱᴛᴀʀᴛ?!\n ᴊɪᴋᴀ ɪʏᴀ ᴘᴇɴᴄᴇᴛ ᴛᴏᴍʙᴏʟ ᴅɪ ʙᴀᴡᴀʜ ɪɴɪ</b></blockquote>
+<blockquote><b>á´€É´á´…á´€ á´€á´‹á´€É´ á´á´‡ÊŸá´€á´‹á´œá´‹á´€É´ Ê€á´‡êœ±á´›á´€Ê€á´›?!\n á´ŠÉªá´‹á´€ ÉªÊá´€ á´˜á´‡É´á´„á´‡á´› á´›á´á´Ê™á´ÊŸ á´…Éª Ê™á´€á´¡á´€Êœ ÉªÉ´Éª</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -382,14 +427,14 @@ async def _(client, callback_query):
                                 importlib.import_module(f"AunuUbot.modules.{mod}")
                             )
                         return await callback_query.edit_message_text(
-                            f"ʀᴇꜱᴛᴀʀᴛ ʙᴇʀʜᴀꜱɪʟ ᴅɪʟᴀᴋᴜᴋᴀɴ !\n\n ɴᴀᴍᴇ: {UB.me.first_name} {UB.me.last_name or ''} | {UB.me.id}"
+                            f"Ê€á´‡êœ±á´›á´€Ê€á´› Ê™á´‡Ê€Êœá´€êœ±ÉªÊŸ á´…ÉªÊŸá´€á´‹á´œá´‹á´€É´ !\n\n É´á´€á´á´‡: {UB.me.first_name} {UB.me.last_name or ''} | {UB.me.id}"
                         )
                     except Exception as error:
                         return await callback_query.edit_message_text(f"{error}")
 
 @PY.BOT("restart")
 async def _(client, message):
-    msg = await message.reply("<b>ᴛᴜɴɢɢᴜ sᴇʙᴇɴᴛᴀʀ</b>")
+    msg = await message.reply("<b>á´›á´œÉ´É¢É¢á´œ sá´‡Ê™á´‡É´á´›á´€Ê€</b>")
     if message.from_user.id not in ubot._get_my_id:
         return await msg.edit(
             f"you don't have acces",
@@ -409,7 +454,7 @@ async def _(client, message):
                                 importlib.import_module(f"AunuUbot.modules.{mod}")
                             )
                         return await msg.edit(
-                            f"ʀᴇꜱᴛᴀʀᴛ ʙᴇʀʜᴀꜱɪʟ ᴅɪʟᴀᴋᴜᴋᴀɴ !\n\n ɴᴀᴍᴇ: {UB.me.first_name} {UB.me.last_name or ''} | `{UB.me.id}`"
+                            f"Ê€á´‡êœ±á´›á´€Ê€á´› Ê™á´‡Ê€Êœá´€êœ±ÉªÊŸ á´…ÉªÊŸá´€á´‹á´œá´‹á´€É´ !\n\n É´á´€á´á´‡: {UB.me.first_name} {UB.me.last_name or ''} | `{UB.me.id}`"
                         )
                     except Exception as error:
                         return await msg.edit(f"{error}")
@@ -430,16 +475,16 @@ async def _(client, callback_query):
     expired = await get_expired_date(user_id)
     try:
         xxxx = (expired - datetime.now()).days
-        return await callback_query.answer(f"⏳ ᴛɪɴɢɢᴀʟ {xxxx} ʜᴀʀɪ ʟᴀɢɪ", True)
+        return await callback_query.answer(f"â³ á´›ÉªÉ´É¢É¢á´€ÊŸ {xxxx} Êœá´€Ê€Éª ÊŸá´€É¢Éª", True)
     except:
-        return await callback_query.answer("✅ sᴜᴅᴀʜ ᴛɪᴅᴀᴋ ᴀᴋᴛɪғ", True)
+        return await callback_query.answer("âœ… sá´œá´…á´€Êœ á´›Éªá´…á´€á´‹ á´€á´‹á´›ÉªÒ“", True)
 
 @PY.CALLBACK("del_ubot")
 async def _(client, callback_query):
     user_id = callback_query.from_user.id
     if user_id not in await get_list_from_vars(client.me.id, "ADMIN_USERS"):
         return await callback_query.answer(
-            f"❌ ᴛᴏᴍʙᴏʟ ɪɴɪ ʙᴜᴋᴀɴ ᴜɴᴛᴜᴋ ᴍᴜ {callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}",
+            f"âŒ á´›á´á´Ê™á´ÊŸ ÉªÉ´Éª Ê™á´œá´‹á´€É´ á´œÉ´á´›á´œá´‹ á´á´œ {callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}",
             True,
         )
     try:
@@ -457,7 +502,7 @@ async def _(client, callback_query):
             ubot._ubot.remove(X)
             await X.log_out()
             await callback_query.answer(
-                f"✅ {get_mention} ʙᴇʀʜᴀsɪʟ ᴅɪʜᴀᴘᴜs ᴅᴀʀɪ ᴅᴀᴛᴀʙᴀsᴇ", True
+                f"âœ… {get_mention} Ê™á´‡Ê€Êœá´€sÉªÊŸ á´…ÉªÊœá´€á´˜á´œs á´…á´€Ê€Éª á´…á´€á´›á´€Ê™á´€sá´‡", True
             )
             await callback_query.edit_message_text(
                 await MSG.UBOT(0),
