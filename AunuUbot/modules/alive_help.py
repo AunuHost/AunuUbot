@@ -38,11 +38,12 @@ async def send_help_overview(client, message):
     buttons = InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help"))
     help_photo = await get_vars(client.me.id, "HELP_PHOTO")
     if help_photo:
-        return await message.reply_photo(
+        return await client.send_photo(
+            message.chat.id,
             help_photo,
             caption=text,
-            quote=True,
             reply_markup=buttons,
+            reply_to_message_id=message.id,
         )
     return await message.reply(text, quote=True, reply_markup=buttons)
 
