@@ -2,6 +2,7 @@ import importlib
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from AunuUbot import bot, ubot
 from AunuUbot.core.helpers import PY
+from AunuUbot.core.helpers._cmd import get_total_commands
 from AunuUbot.modules import loadModule
 from AunuUbot.core.database import *
 from AunuUbot.config import OWNER_ID
