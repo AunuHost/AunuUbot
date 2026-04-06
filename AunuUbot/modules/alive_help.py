@@ -19,6 +19,42 @@ from pyrogram.types import *
 from AunuUbot import *
 
 
+def inline_disabled(error):
+    return "BOT_INLINE_DISABLED" in str(error)
+
+
+async def build_alive_text(client, owner_client):
+    try:
+        peer = owner_client._get_my_peer[owner_client.me.id]
+        users = len(peer["pm"])
+        group = len(peer["gc"])
+    except Exception:
+        users = random.randrange(await owner_client.get_dialogs_count())
+        group = random.randrange(await owner_client.get_dialogs_count())
+    get_exp = await get_expired_date(owner_client.me.id)
+    exp = get_exp.strftime("%d-%m-%Y") if get_exp else "None"
+    if owner_client.me.id == OWNER_ID:
+        status = "Rixɢ-ᴜʙᴏᴛ  <code>[ᴏᴡɴᴇʀ]</code>"
+    elif owner_client.me.id in await get_list_from_vars(client.me.id, "SELER_USERS"):
+        status = "Aunu-ᴜʙᴏᴛ  </b> <code>[ʀᴇsᴇʟʟᴇʀ]</code>"
+    else:
+        status = "Aunu-ᴜʙᴏᴛ  </b> <code>[ᴘʀᴇᴍɪᴜᴍ]</code>"
+    start = datetime.now()
+    await owner_client.invoke(Ping(ping_id=0))
+    ping = (datetime.now() - start).microseconds / 1000
+    uptime = await get_time((time() - start_time))
+    return f"""
+<blockquote>{bot.me.mention}
+    `status: {status}`
+        `expired_on: {exp}` 
+        `dc_id: {owner_client.me.dc_id}`
+        `ping_dc: {ping} ms`
+        `peer_users: {users} users`
+        `peer_group: {group} group`
+        `start_uptime: {uptime}`</blockquote>
+"""
+
+
 @PY.UBOT("alive")
 @PY.TOP_CMD
 async def _(client, message):
@@ -28,7 +64,10 @@ async def _(client, message):
         )
         await message.reply_inline_bot_result(x.query_id, x.results[0].id, quote=True)
     except Exception as error:
-        await message.reply(error)
+        if not inline_disabled(error):
+            return await message.reply(error)
+        msg = await build_alive_text(client, client)
+        await message.reply(msg, quote=True)
     
 
 
@@ -131,12 +170,27 @@ async def _(client, callback_query):
 
 @PY.UBOT("help")
 async def user_help(client, message):
-    if not get_arg(message):
-        try:
-            x = await client.get_inline_bot_results(bot.me.username, "user_help")
-            await message.reply_inline_bot_result(x.query_id, x.results[0].id)
-        except Exception as error:
-            await message.reply(error)
+        if not get_arg(message):
+            try:
+                x = await client.get_inline_bot_results(bot.me.username, "user_help")
+                await message.reply_inline_bot_result(x.query_id, x.results[0].id)
+            except Exception as error:
+                if not inline_disabled(error):
+                    return await message.reply(error)
+                SH = await ubot.get_prefix(client.me.id)
+                msg = (
+                    f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={message.from_user.id}>"
+                    f"{message.from_user.first_name} {message.from_user.last_name or ''}</a>\n"
+                    f"★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n"
+                    f"  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
+                )
+                await message.reply(
+                    msg,
+                    quote=True,
+                    reply_markup=InlineKeyboardMarkup(
+                        paginate_modules(0, HELP_COMMANDS, "help")
+                    ),
+                )
     else:
         module = (get_arg(message))
         if get_arg(message) in HELP_COMMANDS:
@@ -175,7 +229,7 @@ async def _(client, message):
 @PY.INLINE("^user_help")
 async def user_help_inline(client, inline_query):
     SH = await ubot.get_prefix(inline_query.from_user.id)
-    msg = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={inline_query.from_user.id}>{inline_query.from_user.first_name} {inline_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴍᴏᴅᴜʟᴇs: {len(HELP_COMMANDS)}\n  ᴘʀᴇꜰɪx: {' '.join(SH)}</b></blockquote>"
+    msg = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={inline_query.from_user.id}>{inline_query.from_user.first_name} {inline_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇꜰɪx: {' '.join(SH)}</b></blockquote>"
     results = [InlineQueryResultArticle(
         title="Help Menu!",
         reply_markup=InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help")),
@@ -200,7 +254,7 @@ async def help_callback(client, callback_query):
     tutup_match = re.match(r"help_tutup\((.+?)\)", callback_query.data)
     back_match = re.match(r"help_back", callback_query.data)
     SH = await ubot.get_prefix(callback_query.from_user.id)
-    top_text = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={callback_query.from_user.id}>{callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴍᴏᴅᴜʟᴇs: {len(HELP_COMMANDS)}\n  ᴘʀᴇꜰɪx: {' '.join(SH)}</b></blockquote>"
+    top_text = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={callback_query.from_user.id}>{callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇꜰɪx: {' '.join(SH)}</b></blockquote>"
 
     if mod_match:
         module = (mod_match.group(1)).replace(" ", "_")
