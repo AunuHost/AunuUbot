@@ -165,36 +165,36 @@ async def _(client, callback_query):
     user_id = callback_query.from_user.id
     if not user_id == OWNER_ID:
         return await callback_query.answer("tombol ini bukan untuk lu", True)
-        if "Already up to date." in str(out):
-            return await callback_query.answer("sᴜᴅᴀʜ ᴛᴇʀᴜᴘᴅᴀᴛᴇ", True)
-        else:
-            await callback_query.answer("sᴇᴅᴀɴɢ ᴍᴇᴍᴘʀᴏsᴇs ᴜᴘᴅᴀᴛᴇ.....", True)
+    if "Already up to date." in str(out):
+        return await callback_query.answer("sᴜᴅᴀʜ ᴛᴇʀᴜᴘᴅᴀᴛᴇ", True)
+    else:
+        await callback_query.answer("sᴇᴅᴀɴɢ ᴍᴇᴍᴘʀᴏsᴇs ᴜᴘᴅᴀᴛᴇ.....", True)
     os.execl(sys.executable, sys.executable, "-m", "AunuUbot")
 
 
 @PY.UBOT("help")
 async def user_help(client, message):
-        if not get_arg(message):
-            try:
-                x = await client.get_inline_bot_results(bot.me.username, "user_help")
-                await message.reply_inline_bot_result(x.query_id, x.results[0].id)
-            except Exception as error:
-                if not inline_disabled(error):
-                    return await message.reply(error)
-                SH = await ubot.get_prefix(client.me.id)
-                msg = (
-                    f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={message.from_user.id}>"
-                    f"{message.from_user.first_name} {message.from_user.last_name or ''}</a>\n"
-                    f"★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n"
-                    f"  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
-                )
-                await message.reply(
-                    msg,
-                    quote=True,
-                    reply_markup=InlineKeyboardMarkup(
-                        paginate_modules(0, HELP_COMMANDS, "help")
-                    ),
-                )
+    if not get_arg(message):
+        try:
+            x = await client.get_inline_bot_results(bot.me.username, "user_help")
+            await message.reply_inline_bot_result(x.query_id, x.results[0].id)
+        except Exception as error:
+            if not inline_disabled(error):
+                return await message.reply(error)
+            SH = await ubot.get_prefix(client.me.id)
+            msg = (
+                f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={message.from_user.id}>"
+                f"{message.from_user.first_name} {message.from_user.last_name or ''}</a>\n"
+                f"★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n"
+                f"  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
+            )
+            await message.reply(
+                msg,
+                quote=True,
+                reply_markup=InlineKeyboardMarkup(
+                    paginate_modules(0, HELP_COMMANDS, "help")
+                ),
+            )
     else:
         module = (get_arg(message))
         if get_arg(message) in HELP_COMMANDS:
@@ -209,6 +209,7 @@ async def user_help(client, message):
             await message.reply(
                 f"<b>❌ ɴᴏ ᴍᴏᴅᴜʟᴇ ғᴏᴜɴᴅ <code>{module}</code></b>"
             )
+
 @PY.UBOT("helpall")
 @PY.TOP_CMD
 @PY.COOLDOWN(5)
