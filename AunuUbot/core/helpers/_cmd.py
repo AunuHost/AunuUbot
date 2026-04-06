@@ -9,6 +9,18 @@ from AunuUbot.config import DEVS
 from .emoji import *
 
 COOLDOWN = {}
+REGISTERED_COMMANDS = {"ubot": set(), "bot": set()}
+
+
+def register_commands(kind, command):
+    for cmd in str(command).split("|"):
+        cmd = cmd.strip().lower()
+        if cmd:
+            REGISTERED_COMMANDS[kind].add(cmd)
+
+
+def get_total_commands():
+    return len(REGISTERED_COMMANDS["ubot"]) + len(REGISTERED_COMMANDS["bot"])
 
 async def if_sudo(_, client, message):
     is_user = message.from_user if message.from_user else message.sender_chat
@@ -156,6 +168,7 @@ class PY:
     @staticmethod
     def BOT(command, filter=False):
         def wrapper(func):
+            register_commands("bot", command)
             message_filters = (
                 filters.command(command) & filter
                 if filter
@@ -187,6 +200,7 @@ class PY:
             filter = filters.me
 
         def decorator(func):
+            register_commands("ubot", command)
             @ubot.on_message(ubot.cmd_prefix(command) & filter)
             async def wrapped_func(client, message):
                 return await func(client, message)
