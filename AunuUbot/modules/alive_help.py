@@ -34,24 +34,26 @@ async def build_alive_text(client, owner_client):
     get_exp = await get_expired_date(owner_client.me.id)
     exp = get_exp.strftime("%d-%m-%Y") if get_exp else "None"
     if owner_client.me.id == OWNER_ID:
-        status = "Rixɢ-ᴜʙᴏᴛ  <code>[ᴏᴡɴᴇʀ]</code>"
+        status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[ᴏᴡɴᴇʀ]</code>"
+    elif owner_client.me.id in await get_list_from_vars(client.me.id, "ADMIN_USERS"):
+        status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[ᴀᴅᴍɪɴ]</code>"
     elif owner_client.me.id in await get_list_from_vars(client.me.id, "SELER_USERS"):
-        status = "Aunu-ᴜʙᴏᴛ  </b> <code>[ʀᴇsᴇʟʟᴇʀ]</code>"
+        status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[sᴇʟʟᴇʀ]</code>"
     else:
-        status = "Aunu-ᴜʙᴏᴛ  </b> <code>[ᴘʀᴇᴍɪᴜᴍ]</code>"
+        status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[ᴘʀᴇᴍɪᴜᴍ]</code>"
     start = datetime.now()
     await owner_client.invoke(Ping(ping_id=0))
     ping = (datetime.now() - start).microseconds / 1000
     uptime = await get_time((time() - start_time))
     return f"""
 <blockquote>{bot.me.mention}
-    `status: {status}`
-        `expired_on: {exp}` 
-        `dc_id: {owner_client.me.dc_id}`
-        `ping_dc: {ping} ms`
-        `peer_users: {users} users`
-        `peer_group: {group} group`
-        `start_uptime: {uptime}`</blockquote>
+    `sᴛᴀᴛᴜs: {status}`
+        `ᴇxᴘɪʀᴇᴅ_ᴏɴ: {exp}` 
+        `ᴅᴄ_ɪᴅ: {owner_client.me.dc_id}`
+        `ᴘɪɴɢ_ᴅᴄ: {ping} ᴍs`
+        `ᴘᴇᴇʀ_ᴜsᴇʀs: {users} ᴜsᴇʀs`
+        `ᴘᴇᴇʀ_ɢʀᴏᴜᴘ: {group} ɢʀᴏᴜᴘ`
+        `sᴛᴀʀᴛ_ᴜᴘᴛɪᴍᴇ: {uptime}`</blockquote>
 """
 
 
@@ -87,11 +89,13 @@ async def _(client, inline_query):
             get_exp = await get_expired_date(my.me.id)
             exp = get_exp.strftime("%d-%m-%Y") if get_exp else "None"
             if my.me.id == OWNER_ID:
-                status = "ʀɪxᴢ-ᴜʙᴏᴛ  <code>[ᴏᴡɴᴇʀ]</code>"
+                status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[ᴏᴡɴᴇʀ]</code>"
+            elif my.me.id in await get_list_from_vars(client.me.id, "ADMIN_USERS"):
+                status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[ᴀᴅᴍɪɴ]</code>"
             elif my.me.id in await get_list_from_vars(client.me.id, "SELER_USERS"):
-                status = "Aunu-ᴜʙᴏᴛ  </b> <code>[ʀᴇsᴇʟʟᴇʀ]</code>"
+                status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[sᴇʟʟᴇʀ]</code>"
             else:
-                status = "Aunu-ᴜʙᴏᴛ  </b> <code>[ᴘʀᴇᴍɪᴜᴍ]</code>"
+                status = "ᴀᴜɴᴜ-ᴜʙᴏᴛ <code>[ᴘʀᴇᴍɪᴜᴍ]</code>"
             button = BTN.ALIVE(get_id)
             start = datetime.now()
             await my.invoke(Ping(ping_id=0))
@@ -99,13 +103,13 @@ async def _(client, inline_query):
             uptime = await get_time((time() - start_time))
             msg = f"""
 <blockquote>{bot.me.mention}
-    `status: {status}`
-        `expired_on: {exp}` 
-        `dc_id: {my.me.dc_id}`
-        `ping_dc: {ping} ms`
-        `peer_users: {users} users`
-        `peer_group: {group} group`
-        `start_uptime: {uptime}`</blockquote>
+    `sᴛᴀᴛᴜs: {status}`
+        `ᴇxᴘɪʀᴇᴅ_ᴏɴ: {exp}` 
+        `ᴅᴄ_ɪᴅ: {my.me.dc_id}`
+        `ᴘɪɴɢ_ᴅᴄ: {ping} ᴍs`
+        `ᴘᴇᴇʀ_ᴜsᴇʀs: {users} ᴜsᴇʀs`
+        `ᴘᴇᴇʀ_ɢʀᴏᴜᴘ: {group} ɢʀᴏᴜᴘ`
+        `sᴛᴀʀᴛ_ᴜᴘᴛɪᴍᴇ: {uptime}`</blockquote>
 """
             await client.answer_inline_query(
                 inline_query.id,
@@ -113,7 +117,7 @@ async def _(client, inline_query):
                 results=[
                     (
                         InlineQueryResultArticle(
-                            title="💬",
+                            title="ᴀʟɪᴠᴇ",
                             reply_markup=InlineKeyboardMarkup(button),
                             input_message_content=InputTextMessageContent(msg),
                         )
@@ -161,10 +165,10 @@ async def _(client, callback_query):
     user_id = callback_query.from_user.id
     if not user_id == OWNER_ID:
         return await callback_query.answer("tombol ini bukan untuk lu", True)
-    if "Already up to date." in str(out):
-        return await callback_query.answer("ꜱudah terupdate", True)
-    else:
-        await callback_query.answer("ꜱedang memproꜱeꜱ update.....", True)
+        if "Already up to date." in str(out):
+            return await callback_query.answer("sᴜᴅᴀʜ ᴛᴇʀᴜᴘᴅᴀᴛᴇ", True)
+        else:
+            await callback_query.answer("sᴇᴅᴀɴɢ ᴍᴇᴍᴘʀᴏsᴇs ᴜᴘᴅᴀᴛᴇ.....", True)
     os.execl(sys.executable, sys.executable, "-m", "AunuUbot")
 
 
@@ -203,7 +207,7 @@ async def user_help(client, message):
             )
         else:
             await message.reply(
-                f"<b>❌ No module found <code>{module}</code></b>"
+                f"<b>❌ ɴᴏ ᴍᴏᴅᴜʟᴇ ғᴏᴜɴᴅ <code>{module}</code></b>"
             )
 @PY.UBOT("helpall")
 @PY.TOP_CMD
@@ -229,7 +233,7 @@ async def _(client, message):
 @PY.INLINE("^user_help")
 async def user_help_inline(client, inline_query):
     SH = await ubot.get_prefix(inline_query.from_user.id)
-    msg = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={inline_query.from_user.id}>{inline_query.from_user.first_name} {inline_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇꜰɪx: {' '.join(SH)}</b></blockquote>"
+    msg = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={inline_query.from_user.id}>{inline_query.from_user.first_name} {inline_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
     results = [InlineQueryResultArticle(
         title="Help Menu!",
         reply_markup=InlineKeyboardMarkup(paginate_modules(0, HELP_COMMANDS, "help")),
@@ -254,12 +258,12 @@ async def help_callback(client, callback_query):
     tutup_match = re.match(r"help_tutup\((.+?)\)", callback_query.data)
     back_match = re.match(r"help_back", callback_query.data)
     SH = await ubot.get_prefix(callback_query.from_user.id)
-    top_text = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={callback_query.from_user.id}>{callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇꜰɪx: {' '.join(SH)}</b></blockquote>"
+    top_text = f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={callback_query.from_user.id}>{callback_query.from_user.first_name} {callback_query.from_user.last_name or ''}</a>\n★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
 
     if mod_match:
         module = (mod_match.group(1)).replace(" ", "_")
         text = HELP_COMMANDS[module].__HELP__.format(next((p) for p in SH))
-        button = [[InlineKeyboardButton("⊲ ʙᴀᴄᴋ", callback_data="help_back")]]
+    button = [[InlineKeyboardButton("⊲ ʙᴀᴄᴋ", callback_data="help_back")]]
         await callback_query.edit_message_text(
             text=text 
             + '\n<blockquote><b>-- USERBOT 15K/BULAN BY @AunuHostv --</b></blockquote>',
