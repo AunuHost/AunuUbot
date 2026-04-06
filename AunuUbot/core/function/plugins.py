@@ -23,6 +23,7 @@ async def loadPlugins():
 <b>🤖 {bot.me.mention} ʙᴇʀʜᴀsɪʟ ᴅɪᴀᴋᴛɪꜰᴋᴀɴ</b>
 
 <b>📁 ᴍᴏᴅᴜʟᴇs: {len(HELP_COMMANDS)}</b>
+<b>🧩 ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}</b>
 <b>📘 ᴘʏᴛʜᴏɴ: {python_version()}</b>
 <b>📙 ᴘʏʀᴏɢʀᴀᴍ: {__version__}</b>
 
