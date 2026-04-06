@@ -15,6 +15,7 @@ __HELP__ = f"""
 <b>{sc("digitalocean")}</b>
 <code>{{0}}doaddapi &lt;token&gt;</code>
 <code>{{0}}doaddapi none</code>
+<code>{{0}}doaccount</code>
 <code>{{0}}doregions</code>
 <code>{{0}}dosizes</code>
 <code>{{0}}doimages</code>
@@ -25,6 +26,7 @@ __HELP__ = f"""
 <b>{sc("cloudflare")}</b>
 <code>{{0}}cfaddapi &lt;token&gt;</code>
 <code>{{0}}cfaddapi none</code>
+<code>{{0}}cfaccount</code>
 <code>{{0}}listdomain</code>
 <code>{{0}}listsub domain.com</code>
 <code>{{0}}addsub domain.com|sub|ip</code>
@@ -36,13 +38,11 @@ __HELP__ = f"""
 <code>{{0}}addovo &lt;nomor&gt;</code>
 <code>{{0}}addshopeepay &lt;nomor&gt;</code>
 <code>{{0}}addqris</code> {sc("reply foto atau link")}
+<code>{{0}}delpay dana/gopay/ovo/shopeepay/qris</code>
+<code>{{0}}paylist</code>
 <code>{{0}}dana</code> <code>{{0}}gopay</code> <code>{{0}}ovo</code> <code>{{0}}shopeepay</code> <code>{{0}}qris</code>
 
-<b>{sc("note dan help photo")}</b>
-<code>{{0}}addnote nama reply/text</code>
-<code>{{0}}note nama</code>
-<code>{{0}}delnote nama</code>
-<code>{{0}}notes</code>
+<b>{sc("help photo")}</b>
 <code>{{0}}sethelpp</code> {sc("reply foto atau link")}
 <code>{{0}}sethelpp none</code>
 <code>{{0}}helpp</code></blockquote>
@@ -55,12 +55,6 @@ PAYMENT_METHODS = {
     "shopeepay": sc("shopeepay"),
     "qris": sc("qris"),
 }
-
-
-def note_key(name: str) -> str:
-    slug = re.sub(r"[^a-z0-9_-]+", "_", name.lower()).strip("_")
-    return f"NOTE_{slug}" if slug else "NOTE_default"
-
 
 def human_error(data, fallback="terjadi kesalahan"):
     if isinstance(data, dict):
@@ -214,6 +208,27 @@ async def digitalocean_lookup(client, message):
     return await send_or_edit(message, f"<blockquote><b>{title}</b>\n\n" + "\n".join(rows) + "</blockquote>")
 
 
+@PY.UBOT("doaccount")
+@PY.TOP_CMD
+async def do_account(client, message):
+    token = await get_vars(client.me.id, "DO_API_TOKEN")
+    if not token:
+        return await send_or_edit(message, f"<b>{sc('silahkan set dulu')} <code>doaddapi</code>.</b>")
+    status, data = await request_json("GET", "https://api.digitalocean.com/v2/account", headers=do_headers(token))
+    if status >= 400:
+        return await send_or_edit(message, f"<b>error: {human_error(data)}</b>")
+    account = data.get("account") or {}
+    return await send_or_edit(
+        message,
+        "<blockquote><b>{}</b>\n\nemail: <code>{}</code>\nstatus: <code>{}</code>\ndroplet_limit: <code>{}</code></blockquote>".format(
+            sc("digitalocean account"),
+            account.get("email", "-"),
+            account.get("status", "-"),
+            account.get("droplet_limit", "-"),
+        ),
+    )
+
+
 @PY.UBOT("deployvps")
 @PY.TOP_CMD
 async def deploy_vps(client, message):
@@ -307,6 +322,26 @@ async def list_domains(client, message):
         return await send_or_edit(message, f"<b>{sc('tidak ada domain di akun cloudflare')}.</b>")
     rows = [f"- <code>{zone.get('name')}</code>" for zone in zones[:50]]
     return await send_or_edit(message, f"<blockquote><b>{sc('list domain')}</b>\n\n" + "\n".join(rows) + "</blockquote>")
+
+
+@PY.UBOT("cfaccount")
+@PY.TOP_CMD
+async def cf_account(client, message):
+    token = await get_vars(client.me.id, "CF_API_TOKEN")
+    if not token:
+        return await send_or_edit(message, f"<b>{sc('silahkan set dulu')} <code>cfaddapi</code>.</b>")
+    status, data = await request_json("GET", "https://api.cloudflare.com/client/v4/user/tokens/verify", headers=cf_headers(token))
+    if status >= 400 or not data.get("success"):
+        return await send_or_edit(message, f"<b>error: {human_error(data)}</b>")
+    result = data.get("result") or {}
+    return await send_or_edit(
+        message,
+        "<blockquote><b>{}</b>\n\nstatus: <code>{}</code>\nid: <code>{}</code></blockquote>".format(
+            sc("cloudflare token"),
+            result.get("status", "-"),
+            result.get("id", "-"),
+        ),
+    )
 
 
 @PY.UBOT("listsub")
@@ -443,49 +478,24 @@ async def show_payment(client, message):
     return await send_or_edit(message, f"<blockquote><b>{PAYMENT_METHODS[method]}</b>\n<code>{value}</code></blockquote>")
 
 
-@PY.UBOT("addnote")
+@PY.UBOT("delpay")
 @PY.TOP_CMD
-async def add_note(client, message):
-    if len(message.command) < 2:
-        return await send_or_edit(message, f"<b>{sc('gunakan')}: <code>addnote nama isi</code></b>")
-    name = message.command[1]
-    value = await text_source(message, skip_words=2)
-    if not value:
-        return await send_or_edit(message, f"<b>{sc('reply pesan atau tambah isi note')}.</b>")
-    await set_vars(client.me.id, note_key(name), value, "notes")
-    return await send_or_edit(message, f"<b>{sc('note berhasil disimpan')}: <code>{name.lower()}</code></b>")
+async def delete_payment(client, message):
+    method = (get_arg(message) or "").strip().lower()
+    if method not in PAYMENT_METHODS:
+        return await send_or_edit(message, f"<b>{sc('gunakan')}: <code>delpay dana/gopay/ovo/shopeepay/qris</code></b>")
+    await remove_vars(client.me.id, f"PAY_{method.upper()}")
+    return await send_or_edit(message, f"<b>{PAYMENT_METHODS[method]} {sc('berhasil dihapus')}.</b>")
 
 
-@PY.UBOT("note")
+@PY.UBOT("paylist")
 @PY.TOP_CMD
-async def show_note(client, message):
-    name = get_arg(message)
-    if not name:
-        return await send_or_edit(message, f"<b>{sc('gunakan')}: <code>note nama</code></b>")
-    value = await get_vars(client.me.id, note_key(name), "notes")
-    if not value:
-        return await send_or_edit(message, f"<b>{sc('note tidak ditemukan')}.</b>")
-    return await send_or_edit(message, value)
-
-
-@PY.UBOT("delnote")
-@PY.TOP_CMD
-async def delete_note(client, message):
-    name = get_arg(message)
-    if not name:
-        return await send_or_edit(message, f"<b>{sc('gunakan')}: <code>delnote nama</code></b>")
-    await remove_vars(client.me.id, note_key(name), "notes")
-    return await send_or_edit(message, f"<b>{sc('note berhasil dihapus')}: <code>{name.lower()}</code></b>")
-
-
-@PY.UBOT("notes")
-@PY.TOP_CMD
-async def list_notes(client, message):
-    data = await all_vars(client.me.id, "notes") or {}
-    if not data:
-        return await send_or_edit(message, f"<b>{sc('belum ada note')}.</b>")
-    rows = [f"- <code>{key.replace('NOTE_', '').lower()}</code>" for key in sorted(data)]
-    return await send_or_edit(message, f"<blockquote><b>{sc('list note')}</b>\n\n" + "\n".join(rows) + "</blockquote>")
+async def payment_list(client, message):
+    rows = []
+    for key, label in PAYMENT_METHODS.items():
+        exists = await get_vars(client.me.id, f"PAY_{key.upper()}")
+        rows.append(f"- {label}: <code>{sc('aktif') if exists else sc('kosong')}</code>")
+    return await send_or_edit(message, f"<blockquote><b>{sc('status payment')}</b>\n\n" + "\n".join(rows) + "</blockquote>")
 
 
 @PY.UBOT("sethelpp")
