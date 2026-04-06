@@ -120,7 +120,7 @@ async def _(client, callback_query):
     access = await get_access_flags(client, user_id)
     if user_id in ubot._get_my_id or has_build_access(access):
         buttons = [
-            [InlineKeyboardButton("back", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
         ]
         exp = await get_expired_date(user_id)
         prefix = await get_pref(user_id)
@@ -131,21 +131,21 @@ async def _(client, callback_query):
         return await callback_query.edit_message_text(
             f"""
 <blockquote>AunuHost
-  status : {status}
-  prefix : {prefix[0]}
-  expired_on : {waktu}</b></blockquote>
+  sᴛᴀᴛᴜs : {Fonts.smallcap(status)}
+  ᴘʀᴇғɪx : {prefix[0]}
+  ᴇxᴘɪʀᴇᴅ_ᴏɴ : {waktu}</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
         buttons = [
-            [InlineKeyboardButton("buy userbot", callback_data="bahan")],
-            [InlineKeyboardButton("back", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("ʙᴇʟɪ ᴜsᴇʀʙᴏᴛ", callback_data="bahan")],
+            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             """
-<blockquote><b>Sorry, kamu belum punya akses userbot. Silakan beli dulu atau hubungi admin.</b></blockquote>
+<blockquote><b>ᴍᴀᴀғ, ᴋᴀᴍᴜ ʙᴇʟᴜᴍ ᴘᴜɴʏᴀ ᴀᴋsᴇs ᴜsᴇʀʙᴏᴛ. sɪʟᴀᴋᴀɴ ʙᴇʟɪ ᴅᴜʟᴜ ᴀᴛᴀᴜ ʜᴜʙᴜɴɢɪ ᴀᴅᴍɪɴ.</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -158,52 +158,54 @@ async def _(client, callback_query):
     access = await get_access_flags(client, user_id)
     if user_id in ubot._get_my_id:
         buttons = [
-            [InlineKeyboardButton("âœ… Ê€á´‡êœ±á´›á´€Ê€á´›", callback_data=f"ress_ubot")],
-            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("✅ ʀᴇsᴛᴀʀᴛ", callback_data=f"ress_ubot")],
+            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b>á´€É´á´…á´€ êœ±á´œá´…á´€Êœ á´á´‡á´Ê™á´œá´€á´› á´œêœ±á´‡Ê€Ê™á´á´›\n\ná´ŠÉªá´‹á´€ á´œêœ±á´‡Ê€Ê™á´á´› á´€É´á´…á´€ á´›Éªá´…á´€á´‹ Ê™Éªêœ±á´€ á´…ÉªÉ¢á´œÉ´á´€á´‹á´€É´ êœ±ÉªÊŸá´€Êœá´‹á´€É´ á´›á´‡á´‹á´‡É´ á´›á´á´Ê™á´ÊŸ Ê€á´‡êœ±á´›á´€Ê€á´› á´…Éª á´€á´›á´€êœ±</b></blockquote>
+<blockquote><b>ᴀɴᴅᴀ sᴜᴅᴀʜ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ
+
+ᴊɪᴋᴀ ᴜsᴇʀʙᴏᴛ ᴀɴᴅᴀ ᴛɪᴅᴀᴋ ʙɪsᴀ ᴅɪɢᴜɴᴀᴋᴀɴ sɪʟᴀʜᴋᴀɴ ᴛᴇᴋᴀɴ ᴛᴏᴍʙᴏʟ ʀᴇsᴛᴀʀᴛ ᴅɪ ᴀᴛᴀs</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     elif len(ubot._ubot) + 1 > MAX_BOT:
         buttons = [
-            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b><b>âŒ á´›Éªá´…á´€á´‹ Ê™Éªsá´€ á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€Ê™á´á´›!</b>
+<blockquote><b>❌ ᴛɪᴅᴀᴋ ʙɪsᴀ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ!</b>
 
-<b>ðŸ“š á´‹á´€Ê€á´‡É´á´€ á´á´€á´‹sÉªá´á´€ÊŸ á´œsá´‡Ê€Ê™á´á´› á´€á´…á´€ÊŸá´€Êœ {Fonts.smallcap(str(len(ubot._ubot)))} á´›á´‡ÊŸá´€Êœ á´›á´‡Ê€á´„á´€á´˜á´€Éª</b>
+<b>📚 ᴋᴀʀᴇɴᴀ ᴍᴀᴋsɪᴍᴀʟ ᴜsᴇʀʙᴏᴛ ᴀᴅᴀʟᴀʜ {Fonts.smallcap(str(len(ubot._ubot)))} ᴛᴇʟᴀʜ ᴛᴇʀᴄᴀᴘᴀɪ</b>
 
-<b>â˜Žï¸ sÉªÊŸá´€Êœá´‹á´€É´ Êœá´œÊ™á´œÉ´É¢Éª: <a href=tg://openmessage?user_id={OWNER_ID}>á´€á´…á´ÉªÉ´</a>á´ŠÉªá´‹á´€ á´á´€á´œ á´…ÉªÊ™á´œá´€á´›á´‹á´€É´ Ê™á´á´› sá´‡á´˜á´‡Ê€á´›Éª sá´€Êá´€ </b></blockquote>
+<b>☎️ sɪʟᴀʜᴋᴀɴ ʜᴜʙᴜɴɢɪ: <a href=tg://openmessage?user_id={OWNER_ID}>ᴀᴅᴍɪɴ</a> ᴊɪᴋᴀ ᴍᴀᴜ ᴅɪʙᴜᴀᴛᴋᴀɴ ʙᴏᴛ sᴇᴘᴇʀᴛɪ sᴀʏᴀ</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     if not has_build_access(access):
         buttons = [
-            [InlineKeyboardButton("ðŸ’¸ Ê™á´‡ÊŸÉª á´œêœ±á´‡Ê€Ê™á´á´› ðŸ’¸", callback_data="bahan")],
-            [InlineKeyboardButton("á´‹á´‡á´Ê™á´€ÊŸÉª", callback_data=f"home {user_id}")],
+            [InlineKeyboardButton("💸 ʙᴇʟɪ ᴜsᴇʀʙᴏᴛ 💸", callback_data="bahan")],
+            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
         ]
         return await callback_query.edit_message_text(
             f"""
-<blockquote><b>âŒ á´á´€á´€êœ° á´€É´á´…á´€ Ê™á´‡ÊŸá´œá´ á´á´‡á´Ê™á´‡ÊŸÉª á´œêœ±á´‡Ê€Ê™á´á´›, êœ±ÉªÊŸá´€á´‹á´€É´ á´á´‡á´Ê™á´‡ÊŸÉª á´›á´‡Ê€ÊŸá´‡Ê™ÉªÊœ á´…á´€Êœá´œÊŸá´œ</b></blockquote>
+<blockquote><b>❌ ᴍᴀᴀғ ᴀɴᴅᴀ ʙᴇʟᴜᴍ ᴍᴇᴍʙᴇʟɪ ᴜsᴇʀʙᴏᴛ, sɪʟᴀᴋᴀɴ ᴍᴇᴍʙᴇʟɪ ᴛᴇʀʟᴇʙɪʜ ᴅᴀʜᴜʟᴜ</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
-        buttons = [[InlineKeyboardButton("âœ… ÊŸá´€É´á´Šá´œá´›á´‹á´€É´", callback_data="add_ubot")]]
+        buttons = [[InlineKeyboardButton("✅ ʟᴀɴᴊᴜᴛᴋᴀɴ", callback_data="add_ubot")]]
         return await callback_query.edit_message_text(
             """
-<blockquote><b>âœ… á´œÉ´á´›á´œá´‹ á´á´‡á´Ê™á´œá´€á´› á´œsá´‡Ê€sÊ™á´á´› sÉªá´€á´˜á´‹á´€É´ Ê™á´€Êœá´€É´ Ê™á´‡Ê€Éªá´‹á´œá´›
+<blockquote><b>✅ ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ sɪᴀᴘᴋᴀɴ ʙᴀʜᴀɴ ʙᴇʀɪᴋᴜᴛ
 
-    ï¿½ <code>á´˜Êœá´É´á´‡_É´á´œá´Ê™á´‡Ê€</code>: É´á´á´á´‡Ê€ Êœá´˜ á´€á´‹á´œÉ´ á´›á´‡ÊŸá´‡É¢Ê€á´€á´
+    • <code>ᴘʜᴏɴᴇ_ɴᴜᴍʙᴇʀ</code>: ɴᴏᴍᴇʀ ʜᴘ ᴀᴋᴜɴ ᴛᴇʟᴇɢʀᴀᴍ
 
-â˜‘ï¸ á´ŠÉªá´‹á´€ sá´œá´…á´€Êœ á´›á´‡Ê€sá´‡á´…Éªá´€ sÉªÊŸá´€Êœá´‹á´€É´ á´‹ÊŸÉªá´‹ á´›á´á´Ê™á´Éª á´…ÉªÊ™á´€á´¡á´€Êœ</b></blockquote>
+☑️ ᴊɪᴋᴀ sᴜᴅᴀʜ ᴛᴇʀsᴇᴅɪᴀ sɪʟᴀʜᴋᴀɴ ᴋʟɪᴋ ᴛᴏᴍʙᴏʟ ᴅɪ ʙᴀᴡᴀʜ</b></blockquote>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
