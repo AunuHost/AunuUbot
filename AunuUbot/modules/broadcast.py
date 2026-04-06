@@ -1,18 +1,25 @@
 import asyncio
 
 from pyrogram.errors import FloodWait
+from pyrogram.enums import ChatType
 
 from AunuUbot import *
 
 __MODULE__ = "Broadcast"
-__HELP__ = """
-<blockquote><b>Bantuan Untuk Broadcast
+__HELP__ = f"""
+<blockquote><b>{Fonts.smallcap("bantuan untuk broadcast")}</b>
 
-perintah : <code>{0}gcast</code> [text/reply]
-    broadcast ke group dan channel kecuali yang diblacklist
+{Fonts.smallcap("perintah")} : <code>{{0}}gcast group [text/reply]</code>
+    {Fonts.smallcap("broadcast ke group kecuali yang diblacklist")}
 
-perintah : <code>{0}gcastpin</code> [reply]
-    broadcast pin ke group dan channel kecuali blacklist</b></blockquote>
+{Fonts.smallcap("perintah")} : <code>{{0}}gcast channels [text/reply]</code>
+    {Fonts.smallcap("broadcast ke channel kecuali yang diblacklist")}
+
+{Fonts.smallcap("perintah")} : <code>{{0}}gcast dm [text/reply]</code>
+    {Fonts.smallcap("broadcast ke private chat")}
+
+{Fonts.smallcap("perintah")} : <code>{{0}}gcastpin group/channels [reply]</code>
+    {Fonts.smallcap("broadcast pin ke target yang dipilih sambil tetap mengikuti blacklist")}</blockquote>
 """
 
 
@@ -28,17 +35,42 @@ async def _send_gcast(client, target_id, payload, pin=False):
             pass
 
 
+def _extract_target_and_payload(message):
+    parts = message.text.split(None, 2) if message.text else []
+    target = parts[1].lower() if len(parts) > 1 else None
+    payload = message.reply_to_message if message.reply_to_message else (parts[2] if len(parts) > 2 else None)
+    return target, payload
+
+
 async def _run_broadcast(client, message, pin=False):
     blacklist_ids = set(await get_user_ids(client.me.id))
-    dialogs = await get_data_id(client, "global")
-    if message.reply_to_message:
-        payload = message.reply_to_message
+    target, payload = _extract_target_and_payload(message)
+    target_map = {
+        "group": "group",
+        "groups": "group",
+        "channel": "global_channel_only",
+        "channels": "global_channel_only",
+        "dm": "users",
+        "user": "users",
+        "users": "users",
+    }
+    if target not in target_map:
+        return await message.reply_text(
+            "<b>Gunakan <code>{} group/channels/dm [text]</code> atau reply pesan.</b>".format(message.command[0])
+        )
+    if not payload:
+        return await message.reply_text(
+            "<b>Masukkan text broadcast atau reply pesan terlebih dahulu.</b>"
+        )
+
+    query_key = target_map[target]
+    if query_key == "global_channel_only":
+        dialogs = []
+        async for dialog in client.get_dialogs():
+            if dialog.chat.type == ChatType.CHANNEL:
+                dialogs.append(dialog.chat.id)
     else:
-        if len(message.command) < 2:
-            return await message.reply_text(
-                f"<b>Gunakan <code>{message.text.split()[0]}</code> [text] atau reply pesan.</b>"
-            )
-        payload = message.text.split(None, 1)[1]
+        dialogs = await get_data_id(client, query_key)
 
     status = await message.reply_text("<b>Broadcast sedang diproses...</b>")
     sent = 0
@@ -46,7 +78,7 @@ async def _run_broadcast(client, message, pin=False):
     skipped = 0
 
     for target_id in dialogs:
-        if target_id in blacklist_ids:
+        if query_key != "users" and target_id in blacklist_ids:
             skipped += 1
             continue
         try:
@@ -65,6 +97,7 @@ async def _run_broadcast(client, message, pin=False):
 
     await status.edit(
         "<b>Broadcast selesai.</b>\n\n"
+        f"Target: <code>{target}</code>\n"
         f"Berhasil: <code>{sent}</code>\n"
         f"Gagal: <code>{failed}</code>\n"
         f"Blacklist: <code>{skipped}</code>"
