@@ -38,14 +38,14 @@ async def build_help_overview_text(client, user):
     elif user.id in await get_list_from_vars(client.me.id, "SELER_USERS"):
         status = sc("seller")
     return (
-        f"<blockquote><b>❖ ʜᴇʟᴘ ᴄᴇɴᴛᴇʀ ❖</b></blockquote>\n"
-        f"<blockquote>👤 ᴜsᴇʀ: <a href=tg://user?id={user.id}>{user.first_name} {user.last_name or ''}</a>\n"
-        f"🪪 ʀᴏʟᴇ: <code>{status}</code>\n"
-        f"⚙️ ᴘʀᴇғɪx: <code>{' '.join(SH)}</code></blockquote>\n"
-        f"<blockquote>🧩 ᴍᴏᴅᴜʟᴇs: <code>{help_modules}</code>\n"
-        f"🚀 ᴄᴏᴍᴍᴀɴᴅs: <code>{get_total_commands()}</code>\n"
-        f"🧠 ɴᴀᴠɪɢᴀᴛᴇ: <code>ᴛᴀᴘ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ</code></blockquote>\n"
-        f"<blockquote><b>⌞ ᴀᴜɴᴜ ᴜʙᴏᴛ ᴍᴀɴᴀɢᴇʀ ⌝</b></blockquote>"
+        f"<blockquote><b>[9] ʜᴇʟᴘ ᴄᴇɴᴛᴇʀ</b></blockquote>\n"
+        f"<blockquote>user: <a href=tg://user?id={user.id}>{user.first_name} {user.last_name or ''}</a>\n"
+        f"role: <code>{status}</code>\n"
+        f"prefix: <code>{' '.join(SH)}</code></blockquote>\n"
+        f"<blockquote>modules: <code>{help_modules}</code>\n"
+        f"commands: <code>{get_total_commands()}</code>\n"
+        f"layout: <code>rich menu</code></blockquote>\n"
+        f"<blockquote><b>[9] ᴛᴀᴘ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ ᴛᴏ ᴇxᴘʟᴏʀᴇ</b></blockquote>"
     )
 
 
@@ -255,10 +255,10 @@ async def user_help(client, message):
             prefix = await ubot.get_prefix(client.me.id)
             module_title = getattr(HELP_COMMANDS[get_arg(message)], "__MODULE__", module)
             await message.reply(
-                "<blockquote><b>❖ {} ❖</b></blockquote>\n{}\n<blockquote><b>{}</b></blockquote>".format(
+                "<blockquote><b>[9] {} </b></blockquote>\n{}\n<blockquote><b>{}</b></blockquote>".format(
                     module_title,
                     HELP_COMMANDS[get_arg(message)].__HELP__.format(next((p) for p in prefix)),
-                    "⌞ ᴛᴀᴘ ʙᴀᴄᴋ ᴛᴏ ʀᴇᴛᴜʀɴ ⌝",
+                    "[9] ᴛᴀᴘ ʙᴀᴄᴋ ᴛᴏ ʀᴇᴛᴜʀɴ",
                 ),
                 quote=True,
             )
@@ -321,16 +321,16 @@ async def help_callback(client, callback_query):
         module = (mod_match.group(1)).replace(" ", "_")
         module_title = getattr(HELP_COMMANDS[module], "__MODULE__", module)
         text = (
-            "<blockquote><b>❖ {} ❖</b></blockquote>\n{}\n<blockquote><b>{}</b></blockquote>".format(
+            "<blockquote><b>[9] {} </b></blockquote>\n{}\n<blockquote><b>{}</b></blockquote>".format(
                 module_title,
                 HELP_COMMANDS[module].__HELP__.format(next((p) for p in SH)),
-                "⌞ ᴀᴜɴᴜ ᴜʙᴏᴛ ʜᴇʟᴘ ⌝",
+                "[9] ᴀᴜɴᴜ ᴜʙᴏᴛ ʜᴇʟᴘ",
             )
         )
-        button = [[InlineKeyboardButton("⊲ ʙᴀᴄᴋ", callback_data="help_back")]]
+        button = [[InlineKeyboardButton("[9] ʙᴀᴄᴋ", callback_data="help_back")]]
         await edit_help_page(
             callback_query,
-            text + '\n<blockquote><b>-- USERBOT 15K/BULAN BY @AunuHostv --</b></blockquote>',
+            text + '\n<blockquote><b>[9] ᴜsᴇʀʙᴏᴛ 15ᴋ/ʙᴜʟᴀɴ ʙʏ @AunuHostv</b></blockquote>',
             InlineKeyboardMarkup(button),
         )
     elif prev_match:
