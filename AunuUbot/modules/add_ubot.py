@@ -494,6 +494,37 @@ async def _(client, message):
         f"<b>ɢᴀɢᴀʟ:</b> <code>{failed}</code>"
     )
 
+
+@PY.BOT("addadmin|deladmin|addprem|delprem")
+@PY.OWNER
+async def _(client, message):
+    user_id = await extract_user(message)
+    if not user_id:
+        return await message.reply(
+            "<blockquote><b>❌ ᴜsᴇʀ ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ.\n"
+            "ʀᴇᴘʟʏ ᴜsᴇʀ ᴀᴛᴀᴜ ɢᴜɴᴀᴋᴀɴ /command user_id</b></blockquote>"
+        )
+    command = message.command[0].lower()
+    action_map = {
+        "addadmin": ("ADMIN_USERS", "ᴀᴅᴍɪɴ", add_to_vars, "ᴅɪᴛᴀᴍʙᴀʜᴋᴀɴ"),
+        "deladmin": ("ADMIN_USERS", "ᴀᴅᴍɪɴ", remove_from_vars, "ᴅɪʜᴀᴘᴜs"),
+        "addprem": ("PREM_USERS", "ᴘʀᴇᴍɪᴜᴍ", add_to_vars, "ᴅɪᴛᴀᴍʙᴀʜᴋᴀɴ"),
+        "delprem": ("PREM_USERS", "ᴘʀᴇᴍɪᴜᴍ", remove_from_vars, "ᴅɪʜᴀᴘᴜs"),
+    }
+    var_name, role_name, handler, action_text = action_map[command]
+    await handler(client.me.id, var_name, int(user_id))
+    try:
+        user = await bot.get_users(int(user_id))
+        mention = user.mention
+    except Exception:
+        mention = f"<code>{user_id}</code>"
+    return await message.reply(
+        f"<blockquote><b>✅ ʀᴏʟᴇ ʙᴇʀʜᴀsɪʟ ᴅɪᴜᴘᴅᴀᴛᴇ</b>\n\n"
+        f"👤 ᴜsᴇʀ: {mention}\n"
+        f"🪪 ʀᴏʟᴇ: <code>{role_name}</code>\n"
+        f"📌 sᴛᴀᴛᴜs: <code>{action_text}</code></blockquote>"
+    )
+
 @PY.CALLBACK("cek_ubot")
 @PY.BOT("getubot")
 @PY.ADMIN
