@@ -1,25 +1,28 @@
 import asyncio
 
-from pyrogram.errors import FloodWait
 from pyrogram.enums import ChatType
+from pyrogram.errors import FloodWait
 
 from AunuUbot import *
 
-__MODULE__ = "Broadcast"
+sc = Fonts.smallcap
+
+__MODULE__ = sc("broadcast")
 __HELP__ = f"""
-<blockquote><b>{Fonts.smallcap("bantuan untuk broadcast")}</b>
+<blockquote><b>[9] {sc("broadcast center")}</b>
 
-{Fonts.smallcap("perintah")} : <code>{{0}}gcast group [text/reply]</code>
-    {Fonts.smallcap("broadcast ke group kecuali yang diblacklist")}
+<code>{{0}}gcast group [text/reply]</code>
+{sc("broadcast ke semua group kecuali yang diblacklist")}
 
-{Fonts.smallcap("perintah")} : <code>{{0}}gcast channels [text/reply]</code>
-    {Fonts.smallcap("broadcast ke channel kecuali yang diblacklist")}
+<code>{{0}}gcast channels [text/reply]</code>
+{sc("broadcast ke semua channel kecuali yang diblacklist")}
 
-{Fonts.smallcap("perintah")} : <code>{{0}}gcast dm [text/reply]</code>
-    {Fonts.smallcap("broadcast ke private chat")}
+<code>{{0}}gcast dm [text/reply]</code>
+{sc("broadcast ke semua private chat")}
 
-{Fonts.smallcap("perintah")} : <code>{{0}}gcastpin group/channels [reply]</code>
-    {Fonts.smallcap("broadcast pin ke target yang dipilih sambil tetap mengikuti blacklist")}</blockquote>
+<code>{{0}}gcastpin group [reply]</code>
+<code>{{0}}gcastpin channels [reply]</code>
+{sc("broadcast pin ke target yang dipilih dan tetap menghormati blacklist")}</blockquote>
 """
 
 
@@ -42,6 +45,17 @@ def _extract_target_and_payload(message):
     return target, payload
 
 
+def _status_card(title, target, sent, failed, skipped):
+    return (
+        f"<blockquote><b>[9] {title}</b></blockquote>\n"
+        f"<blockquote>target: <code>{target}</code>\n"
+        f"berhasil: <code>{sent}</code>\n"
+        f"gagal: <code>{failed}</code>\n"
+        f"blacklist: <code>{skipped}</code></blockquote>\n"
+        f"<blockquote><b>[9] {sc('broadcast report')}</b></blockquote>"
+    )
+
+
 async def _run_broadcast(client, message, pin=False):
     blacklist_ids = set(await get_user_ids(client.me.id))
     target, payload = _extract_target_and_payload(message)
@@ -56,11 +70,14 @@ async def _run_broadcast(client, message, pin=False):
     }
     if target not in target_map:
         return await message.reply_text(
-            "<b>Gunakan <code>{} group/channels/dm [text]</code> atau reply pesan.</b>".format(message.command[0])
+            f"<blockquote><b>{sc('gunakan')}:</b>\n"
+            f"<code>{message.command[0]} group text</code>\n"
+            f"<code>{message.command[0]} channels text</code>\n"
+            f"<code>{message.command[0]} dm text</code></blockquote>"
         )
     if not payload:
         return await message.reply_text(
-            "<b>Masukkan text broadcast atau reply pesan terlebih dahulu.</b>"
+            f"<blockquote><b>{sc('masukkan text broadcast atau reply pesan terlebih dahulu')}.</b></blockquote>"
         )
 
     query_key = target_map[target]
@@ -72,7 +89,9 @@ async def _run_broadcast(client, message, pin=False):
     else:
         dialogs = await get_data_id(client, query_key)
 
-    status = await message.reply_text("<b>Broadcast sedang diproses...</b>")
+    status = await message.reply_text(
+        f"<blockquote><b>[9] {sc('broadcast sedang diproses')}...</b></blockquote>"
+    )
     sent = 0
     failed = 0
     skipped = 0
@@ -95,13 +114,8 @@ async def _run_broadcast(client, message, pin=False):
         except Exception:
             failed += 1
 
-    await status.edit(
-        "<b>Broadcast selesai.</b>\n\n"
-        f"Target: <code>{target}</code>\n"
-        f"Berhasil: <code>{sent}</code>\n"
-        f"Gagal: <code>{failed}</code>\n"
-        f"Blacklist: <code>{skipped}</code>"
-    )
+    title = sc("broadcast pin selesai") if pin else sc("broadcast selesai")
+    await status.edit(_status_card(title, target, sent, failed, skipped))
 
 
 @PY.UBOT("gcast")
