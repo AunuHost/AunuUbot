@@ -23,13 +23,29 @@ def inline_disabled(error):
     return "BOT_INLINE_DISABLED" in str(error)
 
 
+def sc(text):
+    return Fonts.smallcap(text)
+
+
 async def build_help_overview_text(client, user):
     SH = await ubot.get_prefix(user.id)
+    help_modules = len(HELP_COMMANDS)
+    status = sc("premium")
+    if user.id == OWNER_ID:
+        status = sc("owner")
+    elif user.id in await get_list_from_vars(client.me.id, "ADMIN_USERS"):
+        status = sc("admin")
+    elif user.id in await get_list_from_vars(client.me.id, "SELER_USERS"):
+        status = sc("seller")
     return (
-        f"<blockquote>🪙 ᴍᴇɴᴜ ɪɴʟɪɴᴇ <a href=tg://user?id={user.id}>"
-        f"{user.first_name} {user.last_name or ''}</a>\n"
-        f"★ ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅs: {get_total_commands()}\n"
-        f"  ᴘʀᴇғɪx: {' '.join(SH)}</b></blockquote>"
+        f"<blockquote><b>❖ ʜᴇʟᴘ ᴄᴇɴᴛᴇʀ ❖</b></blockquote>\n"
+        f"<blockquote>👤 ᴜsᴇʀ: <a href=tg://user?id={user.id}>{user.first_name} {user.last_name or ''}</a>\n"
+        f"🪪 ʀᴏʟᴇ: <code>{status}</code>\n"
+        f"⚙️ ᴘʀᴇғɪx: <code>{' '.join(SH)}</code></blockquote>\n"
+        f"<blockquote>🧩 ᴍᴏᴅᴜʟᴇs: <code>{help_modules}</code>\n"
+        f"🚀 ᴄᴏᴍᴍᴀɴᴅs: <code>{get_total_commands()}</code>\n"
+        f"🧠 ɴᴀᴠɪɢᴀᴛᴇ: <code>ᴛᴀᴘ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ</code></blockquote>\n"
+        f"<blockquote><b>⌞ ᴀᴜɴᴜ ᴜʙᴏᴛ ᴍᴀɴᴀɢᴇʀ ⌝</b></blockquote>"
     )
 
 
@@ -181,13 +197,23 @@ async def _(client, callback_query):
 @PY.ADMIN
 async def _(client, message):
     buttons = BTN.BOT_HELP(message)
-    sh = await message.reply("help menu information", reply_markup=InlineKeyboardMarkup(buttons))
+    text = (
+        "<blockquote><b>❖ ʙᴏᴛ ᴄᴏɴᴛʀᴏʟ ᴘᴀɴᴇʟ ❖</b></blockquote>\n"
+        "<blockquote>🛠 ᴘɪʟɪʜ ᴍᴇɴᴜ ᴅɪ ʙᴀᴡᴀʜ\n"
+        "📦 ᴋᴇʟᴏʟᴀ ᴜʙᴏᴛ, sʏsᴛᴇᴍ, ᴜᴘᴅᴀᴛᴇ, ᴅᴀɴ ʀᴏʟᴇ ᴜsᴇʀ</blockquote>"
+    )
+    sh = await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons))
     
 
 @PY.CALLBACK("balik")
 async def _(client, callback_query):
     buttons = BTN.BOT_HELP(callback_query)
-    sh = await callback_query.message.edit("help menu information", reply_markup=InlineKeyboardMarkup(buttons))
+    text = (
+        "<blockquote><b>❖ ʙᴏᴛ ᴄᴏɴᴛʀᴏʟ ᴘᴀɴᴇʟ ❖</b></blockquote>\n"
+        "<blockquote>🛠 ᴘɪʟɪʜ ᴍᴇɴᴜ ᴅɪ ʙᴀᴡᴀʜ\n"
+        "📦 ᴋᴇʟᴏʟᴀ ᴜʙᴏᴛ, sʏsᴛᴇᴍ, ᴜᴘᴅᴀᴛᴇ, ᴅᴀɴ ʀᴏʟᴇ ᴜsᴇʀ</blockquote>"
+    )
+    sh = await callback_query.message.edit(text, reply_markup=InlineKeyboardMarkup(buttons))
 
 @PY.CALLBACK("reboot")
 async def _(client, callback_query):
@@ -227,9 +253,12 @@ async def user_help(client, message):
         module = (get_arg(message))
         if get_arg(message) in HELP_COMMANDS:
             prefix = await ubot.get_prefix(client.me.id)
+            module_title = getattr(HELP_COMMANDS[get_arg(message)], "__MODULE__", module)
             await message.reply(
-                HELP_COMMANDS[get_arg(message)].__HELP__.format(
-                    next((p) for p in prefix)
+                "<blockquote><b>❖ {} ❖</b></blockquote>\n{}\n<blockquote><b>{}</b></blockquote>".format(
+                    module_title,
+                    HELP_COMMANDS[get_arg(message)].__HELP__.format(next((p) for p in prefix)),
+                    "⌞ ᴛᴀᴘ ʙᴀᴄᴋ ᴛᴏ ʀᴇᴛᴜʀɴ ⌝",
                 ),
                 quote=True,
             )
@@ -290,7 +319,14 @@ async def help_callback(client, callback_query):
 
     if mod_match:
         module = (mod_match.group(1)).replace(" ", "_")
-        text = HELP_COMMANDS[module].__HELP__.format(next((p) for p in SH))
+        module_title = getattr(HELP_COMMANDS[module], "__MODULE__", module)
+        text = (
+            "<blockquote><b>❖ {} ❖</b></blockquote>\n{}\n<blockquote><b>{}</b></blockquote>".format(
+                module_title,
+                HELP_COMMANDS[module].__HELP__.format(next((p) for p in SH)),
+                "⌞ ᴀᴜɴᴜ ᴜʙᴏᴛ ʜᴇʟᴘ ⌝",
+            )
+        )
         button = [[InlineKeyboardButton("⊲ ʙᴀᴄᴋ", callback_data="help_back")]]
         await edit_help_page(
             callback_query,
