@@ -1,63 +1,75 @@
 import requests
-import wget
-import os
-from pyrogram import Client
+
 from AunuUbot import *
 
-__MODULE__ = "ᴄᴜᴀᴄᴀ"
-__HELP__ = """
-<blockquote><b>『 cuaca 』</b>
+sc = Fonts.smallcap
 
-  <b>➢ ᴘᴇʀɪɴᴛᴀʜ:</b> <code>{0}cuaca</code> 
-   <i>penjelasan:</b> cek info cuaca di kota kota besar.</i></blockquote>
+__MODULE__ = sc("cuaca")
+__HELP__ = f"""
+<blockquote><b>⁹ 〔 {sc("cuaca board")} 〕</b>
+
+<code>{{0}}cuaca kota</code>
+{sc("cek cuaca kota dengan tampilan ringkas, rapi, dan dekoratif")}</blockquote>
 """
+
+
+def weather_icon(code):
+    if code in {0}:
+        return "☀️"
+    if code in {1, 2, 3}:
+        return "⛅"
+    if code in {45, 48}:
+        return "🌫"
+    if code in {51, 53, 55, 61, 63, 65, 80, 81, 82}:
+        return "🌧"
+    if code in {71, 73, 75, 77, 85, 86}:
+        return "❄️"
+    if code in {95, 96, 99}:
+        return "⛈"
+    return "🌍"
+
 
 @PY.UBOT("cuaca")
+@PY.TOP_CMD
 async def cuaca(client, message):
-    ggl = await EMO.GAGAL(client)
-    sks = await EMO.BERHASIL(client)
-    prs = await EMO.PROSES(client)
-    
-    jalan = await message.reply(f"{prs} Processing...")
-    a = message.text.split(' ', 1)[1]
-    chat_id = message.chat.id
-    url = f"https://widipe.com/weather?text={a}"
-    
+    city = get_arg(message)
+    if not city:
+        return await message.reply_text(
+            f"<blockquote><b>⁹ 〔 {sc('gunakan')} 〕</b>\n<code>{message.command[0]} jakarta</code></blockquote>"
+        )
+    wait = await message.reply_text(f"<blockquote><b>{sc('mencari data cuaca')}...</b></blockquote>")
     try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            hasil = data['result']
-            location = hasil['location']
-            country = hasil['country']
-            weather = hasil['weather']
-            currentTemp = hasil['currentTemp']
-            maxTemp = hasil['maxTemp']
-            minTemp = hasil['minTemp']
-            humidity = hasil['humidity']
-            windSpeed = hasil['windSpeed']
-            photoUrl = f"https://telegra.ph//file/9354c197366cde09650fd.jpg"
-            caption = f"""
-<blockquote>╭─ �  「 <b>Info Cuaca Terkini</b> 」
-│  ◦ <b>location: <code>{location}</code></b>
-│  ◦ <b>country: <code>{country}</code></b>
-│  ◦ <b>weather: <code>{weather}</code></b>
-│  ◦ <b>currentTemp: <code>{currentTemp}</code></b>
-│  ◦ <b>Temp: <code>{maxTemp}, {minTemp}</code></b>
-│  ◦ <b>windSpeed: <code>{windSpeed}</code></b></blockquote>
-╰──── �
-"""
-            photo_path = wget.download(photoUrl)
-            await client.send_photo(chat_id, caption=caption, photo=photo_path)
-            if os.path.exists(photo_path):
-                os.remove(photo_path)
-            
-            await jalan.delete()
-        else:
-            await jalan.edit(f"{ggl} No 'result' key found in the response.")
-    
-    except requests.exceptions.RequestException as e:
-        await jalan.edit(f"{ggl} Request failed: {e}")
-    
-    except Exception as e:
-        await jalan.edit(f"{ggl} An error occurred: {e}")
+        geo = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": city, "count": 1, "language": "id", "format": "json"},
+            timeout=30,
+        ).json()
+        results = geo.get("results") or []
+        if not results:
+            return await wait.edit(f"<blockquote><b>{sc('kota tidak ditemukan')}.</b></blockquote>")
+        loc = results[0]
+        weather = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": loc["latitude"],
+                "longitude": loc["longitude"],
+                "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+                "timezone": "Asia/Jakarta",
+            },
+            timeout=30,
+        ).json()
+        current = weather.get("current", {})
+        icon = weather_icon(current.get("weather_code", -1))
+        text = (
+            f"<blockquote><b>⁹ 〔 {sc('weather report')} 〕</b></blockquote>\n"
+            f"<blockquote>{icon} {sc('lokasi')}: <code>{loc.get('name')}</code>\n"
+            f"🗺 {sc('wilayah')}: <code>{loc.get('admin1') or '-'}, {loc.get('country') or '-'}</code>\n"
+            f"🌡 {sc('suhu')}: <code>{current.get('temperature_2m', '-')}°C</code>\n"
+            f"💧 {sc('kelembapan')}: <code>{current.get('relative_humidity_2m', '-')}%</code>\n"
+            f"🍃 {sc('angin')}: <code>{current.get('wind_speed_10m', '-')} km/h</code>\n"
+            f"🧭 {sc('kode cuaca')}: <code>{current.get('weather_code', '-')}</code></blockquote>\n"
+            f"<blockquote><b>⁹ 〔 {sc('live weather snapshot')} 〕</b></blockquote>"
+        )
+        await wait.edit(text)
+    except Exception as error:
+        await wait.edit(f"<blockquote><b>{sc('gagal mengambil data cuaca')}.</b>\n<code>{error}</code></blockquote>")
