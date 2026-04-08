@@ -41,11 +41,6 @@ __HELP__ = f"""
 <code>{{0}}delpay dana/gopay/ovo/shopeepay/qris</code>
 <code>{{0}}paylist</code>
 <code>{{0}}dana</code> <code>{{0}}gopay</code> <code>{{0}}ovo</code> <code>{{0}}shopeepay</code> <code>{{0}}qris</code>
-
-<b>{sc("help photo")}</b>
-<code>{{0}}sethelpp</code> {sc("reply foto atau link")}
-<code>{{0}}sethelpp none</code>
-<code>{{0}}helpp</code></blockquote>
 """
 
 PAYMENT_METHODS = {
@@ -452,12 +447,20 @@ async def add_payment(client, message):
         if not payload:
             return await send_or_edit(message, f"<b>{sc('reply foto atau kirim link qris')}.</b>")
         await set_vars(client.me.id, key, payload)
-        return await send_or_edit(message, f"<b>{PAYMENT_METHODS[method]} {sc('berhasil disimpan')}.</b>")
+        return await send_or_edit(
+            message,
+            f"<blockquote><b>[9] {PAYMENT_METHODS[method]} {sc('berhasil disimpan')}</b>\n"
+            f"{sc('payment ini sekarang aktif untuk userbot kamu')}</blockquote>",
+        )
     payload = await text_source(message)
     if not payload:
         return await send_or_edit(message, f"<b>{sc('masukkan data untuk')} {PAYMENT_METHODS[method]}.</b>")
     await set_vars(client.me.id, key, payload)
-    return await send_or_edit(message, f"<b>{PAYMENT_METHODS[method]} {sc('berhasil disimpan')}.</b>")
+    return await send_or_edit(
+        message,
+        f"<blockquote><b>[9] {PAYMENT_METHODS[method]} {sc('berhasil disimpan')}</b>\n"
+        f"<code>{payload}</code></blockquote>",
+    )
 
 
 @PY.UBOT("dana|gopay|ovo|shopeepay|qris")
@@ -472,10 +475,17 @@ async def show_payment(client, message):
         return await client.send_photo(
             message.chat.id,
             value,
-            caption=f"<blockquote><b>{PAYMENT_METHODS[method]} {sc('milik')} {client.me.mention}</b></blockquote>",
+            caption=(
+                f"<blockquote><b>[9] {PAYMENT_METHODS[method]} {sc('milik')} {client.me.mention}</b></blockquote>\n"
+                f"<blockquote>{sc('scan qris ini untuk melakukan pembayaran')}</blockquote>"
+            ),
             reply_to_message_id=message.id,
         )
-    return await send_or_edit(message, f"<blockquote><b>{PAYMENT_METHODS[method]}</b>\n<code>{value}</code></blockquote>")
+    return await send_or_edit(
+        message,
+        f"<blockquote><b>[9] {PAYMENT_METHODS[method]} {sc('milik')} {client.me.mention}</b>\n"
+        f"<code>{value}</code></blockquote>",
+    )
 
 
 @PY.UBOT("delpay")
@@ -494,33 +504,11 @@ async def payment_list(client, message):
     rows = []
     for key, label in PAYMENT_METHODS.items():
         exists = await get_vars(client.me.id, f"PAY_{key.upper()}")
-        rows.append(f"- {label}: <code>{sc('aktif') if exists else sc('kosong')}</code>")
-    return await send_or_edit(message, f"<blockquote><b>{sc('status payment')}</b>\n\n" + "\n".join(rows) + "</blockquote>")
-
-
-@PY.UBOT("sethelpp")
-@PY.TOP_CMD
-async def set_help_photo(client, message):
-    arg = get_arg(message)
-    if arg and arg.lower() == "none":
-        await remove_vars(client.me.id, "HELP_PHOTO")
-        return await send_or_edit(message, f"<b>{sc('help photo berhasil dihapus')}.</b>")
-    payload = await media_source(client, message)
-    if not payload:
-        return await send_or_edit(message, f"<b>{sc('reply foto atau kirim link pada sethelpp')}.</b>")
-    await set_vars(client.me.id, "HELP_PHOTO", payload)
-    return await send_or_edit(message, f"<b>{sc('help photo berhasil disimpan')}.</b>")
-
-
-@PY.UBOT("helpp")
-@PY.TOP_CMD
-async def show_help_photo(client, message):
-    payload = await get_vars(client.me.id, "HELP_PHOTO")
-    if not payload:
-        return await send_or_edit(message, f"<b>{sc('help photo belum diset')}.</b>")
-    return await client.send_photo(
-        message.chat.id,
-        payload,
-        caption=f"<blockquote><b>{sc('preview help photo')}</b></blockquote>",
-        reply_to_message_id=message.id,
+        rows.append(f"├ {label}: <code>{sc('aktif') if exists else sc('kosong')}</code>")
+    if rows:
+        rows[-1] = rows[-1].replace("├", "╰", 1)
+    return await send_or_edit(
+        message,
+        f"<blockquote><b>[9] {sc('status payment')}</b>\n"
+        f"owner: {client.me.mention}\n\n" + "\n".join(rows) + "</blockquote>",
     )
