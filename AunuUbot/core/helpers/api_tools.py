@@ -1,8 +1,9 @@
 import asyncio
 import random
-import requests
 
+import aiohttp
 from pyrogram.enums import MessagesFilter
+
 
 class API:
     async def wall(client):
@@ -15,10 +16,11 @@ class API:
         ]
         return random.choice(animenya)
 
-    def waifu():
+    async def waifu():
         url = "https://www.waifu.im/search"
-        response = requests.get(url)
-        content = response.text
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                content = await response.text()
         start_index = content.find("var files = [") + len("var files = ")
         end_index = content.find("]", start_index)
         files_str = content[start_index:end_index]
