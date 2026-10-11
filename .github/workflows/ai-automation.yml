@@ -1,0 +1,175 @@
+name: AI Ultimate Automation (Mold Combo)
+
+on:
+  # 1. Pemicu berbasis Issue (Membaca, Membalas, dan Auto-Fix)
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+  
+  # 2. Pemicu berbasis Jadwal (Cron Job - Berjalan setiap jam 12 malam UTC / 07:00 WIB)
+  schedule:
+    - cron: '0 0 * * *'
+    
+  # 3. Pemicu Manual (Untuk Testing dari Tab Actions)
+  workflow_dispatch:
+
+jobs:
+  ai-process:
+    # Mencegah loop jika bot membalas komentarnya sendiri
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Diperlukan agar pembacaan git history untuk release lebih akurat
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install axios @actions/core @actions/github
+
+      - name: Run AI Agent Execution
+        env:
+          OPENROUTER_API_KEY: \${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node - << 'EOF'
+          const axios = require('axios');
+          const github = require('@actions/github');
+          const core = require('@actions/core');
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          async function run() {
+            try {
+              const context = github.context;
+              const token = process.env.GITHUB_TOKEN;
+              const octokit = github.getOctokit(token);
+              
+              let systemPrompt = `Anda adalah AI senior developer senior. Tugas Anda adalah menganalisis repositori, memperbaiki bug, menulis atau memperbarui kode, dan memberikan respons terstruktur dalam format JSON.
+              
+              PENTING: Anda WAJIB merespons HANYA dengan format JSON valid seperti ini tanpa markdown bash atau teks tambahan:
+              {
+                "explanation": "Penjelasan singkat perubahan dalam bahasa Indonesia",
+                "files_to_update": [
+                  {
+                    "path": "nama_file.js",
+                    "content": "Isi lengkap kode baru atau kode yang sudah diperbaiki"
+                  }
+                ],
+                "should_release": true,
+                "release_notes": "Fitur baru atau perbaikan bug X"
+              }`;
+
+              let userPrompt = "";
+
+              // JIKA DIPICU OLEH ISSUE ATAU KOMENTAR
+              if (context.eventName === 'issues' || context.eventName === 'issue_comment') {
+                let title = context.payload.issue.title;
+                let body = context.payload.issue.body || "";
+                userPrompt = `Ada laporan/permintaan dari GitHub Issue.\nJudul: ${title}\nDeskripsi: ${body}`;
+                
+                if (context.eventName === 'issue_comment') {
+                  userPrompt += `\nKomentar Tambahan: ${context.payload.comment.body}`;
+                }
+                
+                // Tambahkan konteks file yang ada di repo saat ini agar AI tahu strukturnya
+                const files = execSync('find . -maxdepth 2 -not -path \'*/.*\'').toString();
+                userPrompt += `\n\nStruktur file saat ini:\n${files}\n\nSilakan lakukan auto-fix jika ini laporan bug atau build kode jika ini permintaan fitur.`;
+              } 
+              // JIKA DIPICU OLEH CRON JOB ATAU MANUAL
+              else {
+                userPrompt = "Ini adalah pemindaian otomatis terjadwal (Cron Job). Periksa kode di dalam repositori ini, cari potensi bug, lakukan optimasi kode, atau tambahkan improvisasi jika diperlukan.";
+              }
+
+              console.log("Menghubungi API 9router dengan Combo 'mold'...");
+              
+              // Request ke 9router Anda
+              const response = await axios.post('http://toby.hidencloud.com:24697', {
+                model: 'mold',
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ]
+              }, {
+                headers: {
+                  'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              // Bersihkan output AI dari pembungkus markdown ```json jika ada
+              let rawContent = response.data.choices[0].message.content.trim();
+              if (rawContent.startsWith("```json")) rawContent = rawContent.replace(/```json|```/g, "").trim();
+              if (rawContent.startsWith("```")) rawContent = rawContent.replace(/```/g, "").trim();
+              
+              const aiData = JSON.parse(rawContent);
+              console.log("AI Response parsed successfully.");
+
+              // 1. OTOMATIS AUTO-FIX & UPDATE FILE
+              if (aiData.files_to_update && aiData.files_to_update.length > 0) {
+                for (const file of aiData.files_to_update) {
+                  console.log(`Memperbarui file: \${file.path}`);
+                  fs.writeFileSync(file.path, file.content, 'utf8');
+                }
+                
+                // Konfigurasi Git untuk Auto-Commit
+                execSync('git config --global user.name "github-actions[bot]"');
+                execSync('git config --global user.email "github-actions[bot]@://github.com"');
+                execSync('git add .');
+                execSync(`git commit -m "🤖 AI Auto-Fix: \${aiData.explanation || 'Perbaikan otomatis oleh AI'}"`);
+                execSync('git push origin main'); // Sesuaikan jika branch utama Anda 'master'
+                console.log("Berhasil melakukan Auto-Commit & Push!");
+              }
+
+              // 2. BALAS ISSUE JIKA DIPICU OLEH ISSUE
+              if (context.eventName === 'issues' || context.eventName === 'issue_comment') {
+                let replyMessage = `### 🤖 AI Auto-Fix Bot Report\n\n\${aiData.explanation}\n\n`;
+                if (aiData.files_to_update && aiData.files_to_update.length > 0) {
+                  replyMessage += `**File yang diperbarui:**\n` + aiData.files_to_update.map(f => `- \`${f.path}\``).join('\n');
+                } else {
+                  replyMessage += `*Tidak ada file yang perlu diubah untuk issue ini.*`;
+                }
+
+                await octokit.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  body: replyMessage
+                });
+                console.log("Berhasil membalas issue.");
+              }
+
+              // 3. OTOMATIS RELEASE (JIKA AI MENYATAKAN PERLU RELEASE)
+              if (aiData.should_release) {
+                console.log("AI merekomendasikan untuk melakukan Release baru...");
+                
+                // Generate Tag Versi Baru (Menggunakan stempel waktu agar selalu unik)
+                const versionTag = `v1.0.${Math.floor(Date.now() / 100000)}`;
+                
+                await octokit.rest.repos.createRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_name: versionTag,
+                  name: `Release ${versionTag} - AI Automated`,
+                  body: aiData.release_notes || "Otomatis di-generate oleh AI Combo Mold.",
+                  draft: false,
+                  prerelease: false
+                });
+                console.log(`Berhasil membuat GitHub Release baru: ${versionTag}`);
+              }
+
+            } catch (error) {
+              console.error("Error Detail:", error.message);
+              core.setFailed(error.message);
+            }
+          }
+
+          run();
+          EOF
