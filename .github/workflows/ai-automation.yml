@@ -42,8 +42,8 @@ jobs:
           # Membuat berkas skrip dengan ekstensi .mjs agar dipaksa berjalan sebagai ES Module
           cat << 'EOF' > ai_agent.mjs
           import axios from 'axios';
-          import github from '@actions/github';
-          import core from '@actions/core';
+          import * as github from '@actions/github';
+          import * as core from '@actions/core';
           import fs from 'fs';
           import { execSync } from 'child_process';
 
