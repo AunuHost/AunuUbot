@@ -55,7 +55,9 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install axios @actions/core @actions/github
+        # --prefix RUNNER_TEMP: node_modules ditaruh sejajar dengan ai_agent.mjs
+        # agar ESM resolver Node menemukannya (script memang sengaja di luar repo)
+        run: npm install --prefix "$RUNNER_TEMP" axios @actions/core @actions/github
 
       - name: Run AI Agent
         run: |
