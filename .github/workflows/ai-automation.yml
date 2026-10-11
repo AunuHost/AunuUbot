@@ -159,7 +159,9 @@ jobs:
             3. "content" harus isi file UTUH, bukan diff/potongan.
             4. Perubahan minimal dan aman. JANGAN hapus file, JANGAN tulis secret/key ke kode, JANGAN ubah workflow CI.
             5. Jika tidak ada yang perlu diubah, kembalikan "files_to_update": [].
-            6. "should_release": true HANYA jika ada perubahan yang terlihat user (fitur/fix penting). Jangan release untuk refactor kecil.`;
+            6. "should_release": true HANYA jika ada perubahan yang terlihat user (fitur/fix penting). Jangan release untuk refactor kecil.
+            7. BRANDING WAJIB: setiap pesan/output yang dilihat user HARUS memuat footer "AunuUbot". Pertahankan pola footer yang sudah ada di project dan terapkan konsisten di semua pesan baru.
+            8. UI HARUS KEREN: untuk menu/fitur baru atau yang diperbaiki, SELALU gunakan tombol interaktif (inline buttons) yang rapi dan modern — JANGAN kirim teks polos biasa yang membosankan.`;
 
             let userPrompt = '';
             if (isIssueEvent) {
