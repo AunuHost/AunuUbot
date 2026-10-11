@@ -92,7 +92,7 @@ jobs:
               console.log("Menghubungi API 9router dengan Combo 'mold' ke endpoint yang benar...");
               
               // PERBAIKAN UTAMA: Menggunakan endpoint POST v1/chat/completions secara lengkap dengan port 24697
-              const response = await axios.post('http://toby.hidencloud.com:24697', {
+              const response = await axios.post('http://toby.hidencloud.com:24697/v1/chat/completions', {
                 model: 'mold',
                 messages: [
                   { role: 'system', content: systemPrompt },
