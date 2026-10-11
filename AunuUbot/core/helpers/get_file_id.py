@@ -60,7 +60,7 @@ lang_code_translate = {
     "Arabic": "ar",
     "Chinese": "zh-cn",
     "Czech": "cs",
-    "German": "e",
+    "German": "de",
     "Greek": "el",
     "English": "en",
     "Spanish": "es",

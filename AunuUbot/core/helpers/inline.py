@@ -130,7 +130,6 @@ class BTN:
         ]
         return button
 
-    
     def START(message):
         if not message.from_user.id == OWNER_ID:
             button = [
@@ -163,49 +162,6 @@ class BTN:
         ]
         return button
 
-    
-    def UBOT(user_id, count):
-        button = [
-            [
-                InlineKeyboardButton(
-                    "📁 ʜᴀᴘᴜs ᴅᴀʀɪ ᴅᴀᴛᴀʙᴀsᴇ 📁",
-                    callback_data=f"del_ubot {int(user_id)}",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "⏳ ᴄᴇᴋ ᴍᴀsᴀ ᴀᴋᴛɪғ ⏳",
-                    callback_data=f"cek_masa_aktif {int(user_id)}",
-                )
-            ],
-            [
-                InlineKeyboardButton("⬅️", callback_data=f"p_ub {int(count)}"),
-                InlineKeyboardButton("➡️", callback_data=f"n_ub {int(count)}"),
-            ],
-        ]
-        return button
-
-    def DEAK(user_id, count):
-        button = [
-            [
-                InlineKeyboardButton(
-                    "🔙 ᴋᴇᴍʙᴀʟɪ",
-                    callback_data=f"p_ub {int(count)}"
-                ),
-                InlineKeyboardButton(
-                    "sᴇᴛᴜᴊᴜɪ ✅", callback_data=f"deak_akun {int(count)}",
-                ),
-            ],
-        ]
-        return button
-    def PLUS_MINUS(query, user_id):
-        button = [
-            [InlineKeyboardButton("✅ ᴋᴏɴꜰɪʀᴍᴀsɪ", callback_data="confirm")],
-            [InlineKeyboardButton("🔙 ʙᴀᴛᴀʟᴋᴀɴ", callback_data=f"home {user_id}")],
-        ]
-        return button
-
-    
     def UBOT(user_id, count):
         button = [
             [
