@@ -1,7 +1,7 @@
 name: AI Ultimate Automation (Mold Combo)
 
 on:
-  # 1. Pemicu berbasis Issue (Membaca, Membalas, dan Auto-Fix)
+  # 1. Pemicu berbasis Issue dan Komentar (Membaca, Membalas, dan Auto-Fix)
   issues:
     types: [opened]
   issue_comment:
@@ -11,7 +11,7 @@ on:
   schedule:
     - cron: '0 0 * * *'
     
-  # 3. Pemicu Manual (Untuk Testing dari Tab Actions)
+  # 3. Pemicu Manual (Untuk Testing langsung dari Tab Actions)
   workflow_dispatch:
 
 jobs:
@@ -39,12 +39,13 @@ jobs:
           OPENROUTER_API_KEY: \${{ secrets.OPENROUTER_API_KEY }}
           CUSTOM_GIT_TOKEN: \${{ secrets.TOKEN_BOT_AKSES }}
         run: |
-          node - << 'EOF'
-          const axios = require('axios');
-          const github = require('@actions/github');
-          const core = require('@actions/core');
-          const fs = require('fs');
-          const { execSync } = require('child_process');
+          # Membuat berkas skrip dengan ekstensi .mjs agar dipaksa berjalan sebagai ES Module
+          cat << 'EOF' > ai_agent.mjs
+          import axios from 'axios';
+          import github from '@actions/github';
+          import core from '@actions/core';
+          import fs from 'fs';
+          import { execSync } from 'child_process';
 
           async function run() {
             try {
@@ -52,7 +53,7 @@ jobs:
               const token = process.env.CUSTOM_GIT_TOKEN;
               const octokit = github.getOctokit(token);
               
-              let systemPrompt = `Anda adalah AI senior developer. Tugas Anda adalah menganalisis repositori, memperbaiki bug, menulis atau memperbarui kode, dan memberikan respons terstructured dalam format JSON.
+              let systemPrompt = `Anda adalah AI senior developer. Tugas Anda adalah menganalisis repositori, memperbaiki bug, menulis atau memperbarui kode, dan memberikan respons terstruktur dalam format JSON.
               
               PENTING: Anda WAJIB merespons HANYA dengan format JSON valid seperti ini tanpa markdown bash atau teks tambahan:
               {
@@ -79,7 +80,7 @@ jobs:
                   userPrompt += `\nKomentar Tambahan: ${context.payload.comment.body}`;
                 }
                 
-                // Tambahkan konteks file yang ada di repo saat ini agar AI tahu strukturnya
+                // Menyertakan konteks struktur berkas di repositori saat ini
                 const files = execSync('find . -maxdepth 2 -not -path \'*/.*\'').toString();
                 userPrompt += `\n\nStruktur file saat ini:\n${files}\n\nSilakan lakukan auto-fix jika ini laporan bug atau build kode jika ini permintaan fitur.`;
               } 
@@ -90,7 +91,7 @@ jobs:
 
               console.log("Menghubungi API 9router dengan Combo 'mold'...");
               
-              // Request ke 9router Anda menggunakan port 24697
+              // Melakukan request ke endpoint kustom dengan model combo "mold"
               const response = await axios.post('http://toby.hidencloud.com:24697', {
                 model: 'mold',
                 messages: [
@@ -104,7 +105,8 @@ jobs:
                 }
               });
 
-              let rawContent = response.data.choices[0].message.content.trim();
+              // Membersihkan pembungkus markdown block JSON jika AI tidak sengaja menyertakannya
+              let rawContent = response.data.choices.message.content.trim();
               if (rawContent.startsWith("```json")) rawContent = rawContent.replace(/```json|```/g, "").trim();
               if (rawContent.startsWith("```")) rawContent = rawContent.replace(/```/g, "").trim();
               
@@ -118,13 +120,13 @@ jobs:
                   fs.writeFileSync(file.path, file.content, 'utf8');
                 }
                 
-                // Konfigurasi Git untuk Auto-Commit dengan token kustom untuk menghindari restriksi
+                // Mengonfigurasi remote URL menggunakan token autentikasi kustom untuk menghindari restriksi push
                 execSync(`git remote set-url origin https://x-access-token:\${token}@://github.com{context.repo.repo}.git`);
                 execSync('git config --global user.name "github-actions[bot]"');
                 execSync('git config --global user.email "github-actions[bot]@://github.com"');
                 execSync('git add .');
                 execSync(`git commit -m "🤖 AI Auto-Fix: \${aiData.explanation || 'Perbaikan otomatis oleh AI'}"`);
-                execSync('git push origin HEAD:main'); // Menggunakan HEAD untuk memastikan branch saat ini yang terdorong
+                execSync('git push origin HEAD:main'); // Dorong perubahan ke branch utama (main)
                 console.log("Berhasil melakukan Auto-Commit & Push!");
               }
 
@@ -171,3 +173,6 @@ jobs:
 
           run();
           EOF
+          
+          # Mengeksekusi berkas ES Module menggunakan runtime Node.js
+          node ai_agent.mjs
