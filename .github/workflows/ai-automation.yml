@@ -37,7 +37,7 @@ jobs:
       - name: Run AI Agent Execution
         env:
           OPENROUTER_API_KEY: \${{ secrets.OPENROUTER_API_KEY }}
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          CUSTOM_GIT_TOKEN: \${{ secrets.TOKEN_BOT_AKSES }}
         run: |
           node - << 'EOF'
           const axios = require('axios');
@@ -49,10 +49,10 @@ jobs:
           async function run() {
             try {
               const context = github.context;
-              const token = process.env.GITHUB_TOKEN;
+              const token = process.env.CUSTOM_GIT_TOKEN;
               const octokit = github.getOctokit(token);
               
-              let systemPrompt = `Anda adalah AI senior developer senior. Tugas Anda adalah menganalisis repositori, memperbaiki bug, menulis atau memperbarui kode, dan memberikan respons terstruktur dalam format JSON.
+              let systemPrompt = `Anda adalah AI senior developer. Tugas Anda adalah menganalisis repositori, memperbaiki bug, menulis atau memperbarui kode, dan memberikan respons terstructured dalam format JSON.
               
               PENTING: Anda WAJIB merespons HANYA dengan format JSON valid seperti ini tanpa markdown bash atau teks tambahan:
               {
@@ -90,7 +90,7 @@ jobs:
 
               console.log("Menghubungi API 9router dengan Combo 'mold'...");
               
-              // Request ke 9router Anda
+              // Request ke 9router Anda menggunakan port 24697
               const response = await axios.post('http://toby.hidencloud.com:24697', {
                 model: 'mold',
                 messages: [
@@ -104,7 +104,6 @@ jobs:
                 }
               });
 
-              // Bersihkan output AI dari pembungkus markdown ```json jika ada
               let rawContent = response.data.choices[0].message.content.trim();
               if (rawContent.startsWith("```json")) rawContent = rawContent.replace(/```json|```/g, "").trim();
               if (rawContent.startsWith("```")) rawContent = rawContent.replace(/```/g, "").trim();
@@ -119,12 +118,13 @@ jobs:
                   fs.writeFileSync(file.path, file.content, 'utf8');
                 }
                 
-                // Konfigurasi Git untuk Auto-Commit
+                // Konfigurasi Git untuk Auto-Commit dengan token kustom untuk menghindari restriksi
+                execSync(`git remote set-url origin https://x-access-token:\${token}@://github.com{context.repo.repo}.git`);
                 execSync('git config --global user.name "github-actions[bot]"');
                 execSync('git config --global user.email "github-actions[bot]@://github.com"');
                 execSync('git add .');
                 execSync(`git commit -m "🤖 AI Auto-Fix: \${aiData.explanation || 'Perbaikan otomatis oleh AI'}"`);
-                execSync('git push origin main'); // Sesuaikan jika branch utama Anda 'master'
+                execSync('git push origin HEAD:main'); // Menggunakan HEAD untuk memastikan branch saat ini yang terdorong
                 console.log("Berhasil melakukan Auto-Commit & Push!");
               }
 
@@ -149,8 +149,6 @@ jobs:
               // 3. OTOMATIS RELEASE (JIKA AI MENYATAKAN PERLU RELEASE)
               if (aiData.should_release) {
                 console.log("AI merekomendasikan untuk melakukan Release baru...");
-                
-                // Generate Tag Versi Baru (Menggunakan stempel waktu agar selalu unik)
                 const versionTag = `v1.0.${Math.floor(Date.now() / 100000)}`;
                 
                 await octokit.rest.repos.createRelease({
