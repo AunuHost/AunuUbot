@@ -26,7 +26,8 @@ async def if_sudo(_, client, message):
     is_user = message.from_user if message.from_user else message.sender_chat
     if not is_user:
         return False
-    is_self = bool(message.from_user and message.from_user.is_self or getattr(message, "outgoing", False))
+    # FIX: parentheses untuk precedence yang benar
+    is_self = bool((message.from_user and message.from_user.is_self) or getattr(message, "outgoing", False))
     return is_self or is_user.id in DEVS or is_user.id == OWNER_ID
 
 async def if_filter(_, client, message):
@@ -44,20 +45,28 @@ class PY:
             async def function(client, message):
                 user = message.from_user.id if message.from_user else 0
                 chat = message.chat.id if message.chat else 0
-                command = message.command[0].lower() if getattr(message, "command", None) else func.__name__
+                # FIX: aman jika message.command belum ada
+                cmd = ""
+                if getattr(message, "command", None):
+                    try:
+                        cmd = message.command[0].lower()
+                    except Exception:
+                        cmd = func.__name__.lower()
+                else:
+                    cmd = func.__name__.lower()
                 if bucket == "chat":
                     scope = chat
                 elif bucket == "global":
                     scope = "global"
                 else:
                     scope = user
-                key = (scope, command)
+                key = (scope, cmd)
                 now = monotonic()
                 last_run = COOLDOWN.get(key, 0)
                 remaining = seconds - (now - last_run)
                 if remaining > 0:
                     return await message.reply_text(
-                        f"<b>Tunggu {remaining:.1f} detik sebelum memakai <code>{command}</code> lagi.</b>"
+                        f"<b>Tunggu {remaining:.1f} detik sebelum memakai <code>{cmd}</code> lagi.</b>\n<b>AunuUbot</b>"
                     )
                 COOLDOWN[key] = now
                 return await func(client, message)
@@ -146,10 +155,6 @@ class PY:
                     "query": filters.create(if_private) & filters.private & ~filters.group & ~filters.bot,
                     "group": 6,
                 },
-            # "HANDLE_ANTI_USER": {
-                    # "query": filters.create(buat_anti_user) & filters.create(mecha_chat),
-                    # "group": 6,
-                # },
         }
         result_query = query_mapping.get(result)
 
@@ -186,7 +191,7 @@ class PY:
     @staticmethod
     def TOP_CMD(func):
         async def function(client, message):
-            cmd = message.command[0].lower()
+            cmd = message.command[0].lower() if getattr(message, "command", None) else func.__name__.lower()
             top = await get_vars(bot.me.id, cmd, "modules")
             get = int(top) + 1 if top else 1
             await set_vars(bot.me.id, cmd, get, "modules")
@@ -255,7 +260,7 @@ class PY:
         async def function(client, message):
             ultra_users = await get_list_from_vars(bot.me.id, "ULTRA_PREM")
             if client.me.id not in ultra_users:
-                return await message.reply_text("<emoji id=6113891550788324241>❌</emoji>sorry ! this acces only for [SuperUltra]")
+                return await message.reply_text("<emoji id=6113891550788324241>❌</emoji>sorry ! this acces only for [SuperUltra]\n<b>AunuUbot</b>")
             return await func(client, message)
 
         return function

@@ -28,22 +28,27 @@ def create_inline_keyboard(text, user_id=False, is_back=False):
 
     prev_button_data = None
     for button_text, button_data in button_matches:
-        data = (
-            button_data.split("#")[0]
-            if detect_url_links(button_data.split("#")[0])
-            else f"_gtnote {int(user_id.split('_')[0])}_{user_id.split('_')[1]} {button_data.split('#')[0]}"
-        )
-        cb_data = data if user_id else button_data.split("#")[0]
+        raw_data = button_data.split("#")[0].strip()
+        is_url = bool(detect_url_links(raw_data))
+        # FIX: jangan akses user_id.split saat user_id=False (crash) dan jangan pakai _gtnote untuk URL
+        if user_id and not is_url:
+            try:
+                uid_part = str(user_id).split("_")
+                cb_data = f"_gtnote {int(uid_part[0])}_{uid_part[1]} {raw_data}"
+            except Exception:
+                cb_data = raw_data
+        else:
+            cb_data = raw_data
         if "#" in button_data:
             if prev_button_data:
-                if detect_url_links(cb_data):
+                if is_url:
                     keyboard[-1].append(InlineKeyboardButton(button_text, url=cb_data))
                 else:
                     keyboard[-1].append(
                         InlineKeyboardButton(button_text, callback_data=cb_data)
                     )
             else:
-                if detect_url_links(cb_data):
+                if is_url:
                     button_row = [InlineKeyboardButton(button_text, url=cb_data)]
                 else:
                     button_row = [
@@ -51,7 +56,7 @@ def create_inline_keyboard(text, user_id=False, is_back=False):
                     ]
                 keyboard.append(button_row)
         else:
-            if button_data.startswith("http"):
+            if raw_data.startswith("http"):
                 button_row = [InlineKeyboardButton(button_text, url=cb_data)]
             else:
                 button_row = [InlineKeyboardButton(button_text, callback_data=cb_data)]
@@ -62,14 +67,18 @@ def create_inline_keyboard(text, user_id=False, is_back=False):
     markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
 
     if user_id and is_back:
-        markup.inline_keyboard.append(
-            [
-                InlineKeyboardButton(
-                    "ᴋᴇᴍʙᴀʟɪ",
-                    f"_gtnote {int(user_id.split('_')[0])}_{user_id.split('_')[1]}",
-                )
-            ]
-        )
+        try:
+            uid_part = str(user_id).split("_")
+            markup.inline_keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        "ᴋᴇᴍʙᴀʟɪ",
+                        f"_gtnote {int(uid_part[0])}_{uid_part[1]}",
+                    )
+                ]
+            )
+        except Exception:
+            pass
 
     return markup, text_matches
 
