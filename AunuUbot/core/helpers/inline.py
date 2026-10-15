@@ -181,7 +181,7 @@ class BTN:
             ],
             [
                 InlineKeyboardButton(
-                    "⏳ ᴄᴇᴋ ᴍᴀsᴀ ᴀᴋᴛɪғ ⏳",
+                    "⏳ ᴄᴇᴋ ᴍᴀsᴀ ᴀᴋᴛɪꜰ ⏳",
                     callback_data=f"cek_masa_aktif {int(user_id)}",
                 )
             ],
@@ -205,3 +205,21 @@ class BTN:
             ],
         ]
         return button
+
+
+def get_text(message):
+    if message.reply_to_message:
+        if len(message.command) < 2:
+            text = message.reply_to_message.text or message.reply_to_message.caption
+        else:
+            text = (
+                (message.reply_to_message.text or message.reply_to_message.caption)
+                + "\n\n"
+                + message.text.split(None, 1)[1]
+            )
+    else:
+        if len(message.command) < 2:
+            text = ""
+        else:
+            text = message.text.split(None, 1)[1]
+    return text
