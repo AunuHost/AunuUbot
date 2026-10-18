@@ -175,7 +175,7 @@ class MEMES:
         "picks up a {item} and {hits} {victim} with it.",
         "ties {victim} to a chair and {throws} a {item} at them.",
         "{hits} {victim} {where} with a {item}.",
-        "ties {victim} to a pole and whips them {where} with a {item}."
+        "ties {victim} to a pole and whips them {where} with a {item}.",
         "gave a friendly push to help {victim} learn to swim in lava.",
         "sent {victim} to /dev/null.",
         "sent {victim} down the memory hole.",
@@ -314,8 +314,8 @@ class MEMES:
         "9": "6",
         ",": "'",
         ".": "˙",
-        "?": "�",
-        "!": "�",
+        "?": "¿",
+        "!": "¡",
         '"': ",,",
         "'": ",",
         "(": ")",
@@ -356,7 +356,7 @@ class MEMES:
         "乁( ⁰͡  Ĺ̯ ⁰͡ ) ㄏ",
         r"¯\_༼ ́ ͜ʖ ̀ ༽_/¯",
         r"¯\_( ͡° ͜ʖ ͡°)_/¯",
-        r"�\(�_o)/�",
+        r"¯\(°_o)/¯",
         "┐( ∵ )┌",
         r"¯\_༼ᴼل͜ᴼ༽_/¯",
         "╮(. ❛ ᴗ ❛.)╭",
@@ -418,12 +418,12 @@ class MEMES:
     )
 
     TABLE_FLIPS = [
-        "(╯°Д°)╯︵/(.□ . \)",
+        "(╯°Д°)╯︵/(.□ . \\)",
         "(˚Õ˚)ر ~~~~╚╩╩╝",
         "(ノಠ益ಠ)ノ彡┻┻",
         "(╯°□°)╯︵ ┻┻",
         "(┛◉Д◉)┛彡┻┻",
-        "┻┻︵ \(°□°)/ ︵ ┻┻",
+        "┻┻︵ \\(°□°)/ ︵ ┻┻",
         "(┛ಠ_ಠ)┛彡┻┻",
         "(╯°□°)╯︵ ʞooqǝɔɐℲ",
     ]

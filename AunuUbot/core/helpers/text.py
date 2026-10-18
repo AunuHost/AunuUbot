@@ -10,6 +10,8 @@ class MSG:
 <b>├ ᴀᴋᴜɴ:</b> <a href=tg://user?id={X.me.id}>{X.me.first_name} {X.me.last_name or ''}</a>
 <b>├ ɪᴅ:</b> <code>{X.me.id}</code>
 <b>╰ ᴍᴀsᴀ ᴀᴋᴛɪꜰ ᴛᴇʟᴀʜ ʜᴀʙɪs</b></blockquote>
+
+<b>AunuUbot</b>
 """
 
     def START(message):
@@ -19,7 +21,7 @@ class MSG:
 <b>💬 @{bot.me.username} ᴀᴅᴀʟᴀʜ ʙᴏᴛ ʏᴀɴɢ ᴅᴀᴘᴀᴛ ᴍᴇᴍʙᴜᴀᴛ ᴜsᴇʀʙᴏᴛ ᴅᴇɴɢᴀɴ ᴍᴜᴅᴀʜ</b>
 
 🚀 ꜱɪʟᴀʜᴋᴀɴ ᴄʜᴀᴛ ᴏᴡɴᴇʀ ᴅɪ ʙᴀᴡᴀʜ ɪɴɪ ᴜɴᴛᴜᴋ ᴍᴇᴍʙᴇʟɪ ᴜꜱᴇʀʙᴏᴛ 
-\U0001f4ac ᴏᴡɴᴇʀ : <a href=tg://openmessage?user_id={OWNER_ID}>AunuXdev</a> 
+💬 ᴏᴡɴᴇʀ : <a href=tg://openmessage?user_id={OWNER_ID}>AunuXdev</a> 
 
 ʟɪsᴛ ʜᴀʀɢᴀ & ᴋᴇʙᴜᴛᴜʜᴀɴ ᴜsᴇʀʙᴏᴛ :
 <a href='https://t.me/AunuHostv'>ᴋᴇʙᴜᴛᴜʜᴀɴ ᴜsᴇʀʙᴏᴛ</a>

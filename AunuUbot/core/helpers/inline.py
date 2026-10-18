@@ -135,7 +135,7 @@ class BTN:
 
     def EXP_UBOT():
         button = [
-            [InlineKeyboardButton("beli userbot", callback_data="bahan")],
+            [InlineKeyboardButton("🛍 ʙᴇʟɪ ᴜsᴇʀʙᴏᴛ", callback_data="bahan")],
         ]
         return button
 

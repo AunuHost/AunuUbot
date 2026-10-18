@@ -53,11 +53,13 @@ async def extract_userid(message, text):
     if is_int(text):
         return int(text)
 
-    entities = message.entities
+    entities = message.entities or message.caption_entities
     app = message._client
 
     if entities is not None and len(entities) > 0:
-        entity = entities[1 if message.text.startswith("/") else 0]
+        raw_text = message.text or message.caption or ""
+        first_is_slash = raw_text.startswith("/")
+        entity = entities[1 if first_is_slash else 0]
         if entity.type == enums.MessageEntityType.MENTION:
             try:
                 user = await app.get_users(text)
@@ -79,8 +81,8 @@ async def extract_userid(message, text):
 
 
 async def extract_user_and_reason(message, sender_chat=False):
-    args = message.text.strip().split()
-    text = message.text
+    raw_text = message.text or message.caption or ""
+    args = raw_text.strip().split()
     user = None
     reason = None
 
@@ -127,86 +129,3 @@ async def list_admins(message):
         ],
     }
     return admins_in_chat[message.chat.id]["data"]
-
-
-def get_text(message):
-    if message.reply_to_message:
-        if len(message.command) < 2:
-            text = message.reply_to_message.text or message.reply_to_message.caption
-        else:
-            text = (
-                (message.reply_to_message.text or message.reply_to_message.caption)
-                + "\n\n"
-                + message.text.split(None, 1)[1]
-            )
-    else:
-        if len(message.command) < 2:
-            text = ""
-        else:
-            text = message.text.split(None, 1)[1]
-    return text
-
-
-def get_message(message):
-    msg = (
-        message.reply_to_message
-        if message.reply_to_message
-        else ""
-        if len(message.command) < 2
-        else message.text.split(None, 1)[1]
-    )
-    return msg
-
-
-async def encode(string):
-    string_bytes = string.encode("ascii")
-    base64_bytes = base64.urlsafe_b64encode(string_bytes)
-    return (base64_bytes.decode("ascii")).strip("=")
-
-
-async def decode(base64_string):
-    base64_string = base64_string.strip("=")
-    base64_bytes = (base64_string + "=" * (-len(base64_string) % 4)).encode("ascii")
-    string_bytes = base64.urlsafe_b64decode(base64_bytes)
-    return string_bytes.decode("ascii")
-
-
-async def get_data_id(client, query):
-    chat_types = {
-        "global": [ChatType.CHANNEL, ChatType.GROUP, ChatType.SUPERGROUP],
-        "all": [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.PRIVATE],
-        "group": [ChatType.GROUP, ChatType.SUPERGROUP],
-        "users": [ChatType.PRIVATE],
-    }
-    dialogs = []
-    try:
-        async for dialog in client.get_dialogs():
-            if dialog.chat.type in chat_types.get(query, []):
-                dialogs.append(dialog.chat.id)
-    except ChannelPrivate:
-        pass
-    return dialogs
-
-
-def extract_type_and_msg(message):
-    args = message.text.split(None, 2)
-    if len(args) < 2:
-        return None, None
-
-    type_ = args[1]
-    msg = message.reply_to_message if message.reply_to_message else args[2] if len(args) > 2 else None
-    return type_, msg
-
-
-def extract_type_and_text(message):
-    args = message.text.split(None, 2)
-    if len(args) < 2:
-        return None, None
-
-    type_ = args[1]
-    msg = (
-        message.reply_to_message.text
-        if message.reply_to_message
-        else args[2] if len(args) > 2 else None
-    )
-    return type_, msg
