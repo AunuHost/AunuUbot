@@ -29,6 +29,8 @@ async def loadPlugins():
 <b>📙 ᴘʏʀᴏɢʀᴀᴍ: {__version__}</b>
 
 <b>👤 ᴜsᴇʀʙᴏᴛ: {len(ubot._ubot)}</b>
+
+<b>AunuUbot</b>
 """,
    reply_markup=InlineKeyboardMarkup(
             [

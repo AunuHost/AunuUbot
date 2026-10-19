@@ -21,6 +21,16 @@ from pyrogram.enums import ChatType
 from pyrogram.errors import *
 
 
+async def bash(cmd: str):
+    proc = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    return (stdout or stderr).decode().strip()
+
+
 def unpackInlineMessage(inline_message_id: str):
     dc_id, message_id, chat_id, query_id = unpack(
         "<iiiq",
@@ -59,7 +69,8 @@ async def extract_userid(message, text):
     if entities is not None and len(entities) > 0:
         raw_text = message.text or message.caption or ""
         first_is_slash = raw_text.startswith("/")
-        entity = entities[1 if first_is_slash else 0]
+        index = 1 if (first_is_slash and len(entities) > 1) else 0
+        entity = entities[index]
         if entity.type == enums.MessageEntityType.MENTION:
             try:
                 user = await app.get_users(text)
@@ -107,7 +118,6 @@ async def extract_user_and_reason(message, sender_chat=False):
 
 async def extract_user(message):
     return (await extract_user_and_reason(message))[0]
-
 
 admins_in_chat = {}
 

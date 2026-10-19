@@ -22,6 +22,12 @@ def detect_button_and_text(text):
     return button_matches, text_matches
 
 
+def _format_url(url_str):
+    if not url_str.startswith(("http://", "https://", "tg://")):
+        return f"https://{url_str}"
+    return url_str
+
+
 def create_inline_keyboard(text, user_id=False, is_back=False):
     keyboard = []
     button_matches, text_matches = detect_button_and_text(text)
@@ -30,7 +36,6 @@ def create_inline_keyboard(text, user_id=False, is_back=False):
     for button_text, button_data in button_matches:
         raw_data = button_data.split("#")[0].strip()
         is_url = bool(detect_url_links(raw_data))
-        # FIX: jangan akses user_id.split saat user_id=False (crash) dan jangan pakai _gtnote untuk URL
         if user_id and not is_url:
             try:
                 uid_part = str(user_id).split("_")
@@ -39,28 +44,17 @@ def create_inline_keyboard(text, user_id=False, is_back=False):
                 cb_data = raw_data
         else:
             cb_data = raw_data
-        if "#" in button_data:
-            if prev_button_data:
-                if is_url:
-                    keyboard[-1].append(InlineKeyboardButton(button_text, url=cb_data))
-                else:
-                    keyboard[-1].append(
-                        InlineKeyboardButton(button_text, callback_data=cb_data)
-                    )
-            else:
-                if is_url:
-                    button_row = [InlineKeyboardButton(button_text, url=cb_data)]
-                else:
-                    button_row = [
-                        InlineKeyboardButton(button_text, callback_data=cb_data)
-                    ]
-                keyboard.append(button_row)
+
+        button_obj = (
+            InlineKeyboardButton(button_text, url=_format_url(cb_data))
+            if is_url
+            else InlineKeyboardButton(button_text, callback_data=cb_data)
+        )
+
+        if "#" in button_data and prev_button_data:
+            keyboard[-1].append(button_obj)
         else:
-            if raw_data.startswith("http"):
-                button_row = [InlineKeyboardButton(button_text, url=cb_data)]
-            else:
-                button_row = [InlineKeyboardButton(button_text, callback_data=cb_data)]
-            keyboard.append(button_row)
+            keyboard.append([button_obj])
 
         prev_button_data = button_data
 
@@ -73,7 +67,7 @@ def create_inline_keyboard(text, user_id=False, is_back=False):
                 [
                     InlineKeyboardButton(
                         "ᴋᴇᴍʙᴀʟɪ",
-                        f"_gtnote {int(uid_part[0])}_{uid_part[1]}",
+                        callback_data=f"_gtnote {int(uid_part[0])}_{uid_part[1]}",
                     )
                 ]
             )
