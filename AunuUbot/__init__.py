@@ -139,6 +139,9 @@ class Ubot(Client):
     async def start(self):
         await super().start()
         await self.call_py.start()
+        # late import to avoid circular dependency: get_pref is defined in
+        # AunuUbot.core.database.pref which is imported at the bottom of this file
+        from AunuUbot.core.database.pref import get_pref
         handler = await get_pref(self.me.id)
         if handler:
             self._prefix[self.me.id] = handler
