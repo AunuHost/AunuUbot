@@ -1,0 +1,408 @@
+name: AunuWise AI Automation
+
+on:
+  # 1. Pemicu Issue & Komentar (baca, balas, auto-fix)
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+  # 2. Cron — 00:00 UTC = 07:00 WIB
+  schedule:
+    - cron: '0 0 * * *'
+
+  # 3. Manual (+ input instruksi opsional)
+  workflow_dispatch:
+    inputs:
+      instruction:
+        description: 'Instruksi tambahan untuk AI (opsional)'
+        required: false
+        default: ''
+
+# Mencegah dua job jalan barengan (tabrakan push)
+concurrency:
+  group: ai-automation-saas-client
+  cancel-in-progress: false
+
+# GITHUB_TOKEN hanya untuk checkout (read). Semua write (commit/issue/release)
+# dikerjakan worker server-side via /v1/agent/* memakai PAT bot.
+permissions:
+  contents: read
+
+jobs:
+  ai-process:
+    # Cegah loop via tipe Bot; balasan bot sendiri (akun User) ditangani di script
+    # via deteksi awalan "### 🤖" agar perintah user dari akun mana pun tetap jalan.
+    if: "github.event.sender.type != 'Bot'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # ===== DIISI OTOMATIS OLEH SISTEM SAAS — JANGAN UBAH MANUAL =====
+      # (tidak ada token GitHub di sini — semua aksi GitHub dikerjakan server SaaS)
+      AI_API_KEY: sk_ccfb808ca97a3f3e2f40017021c82777356a5c859a11dc79
+      AI_ENDPOINT: 'https://request.sryze.cc/v1/chat/completions'
+      AI_MODEL: 'mold'
+      AI_MAX_TOKENS: '16000'
+      GITHUB_REPO: ${{ github.repository }}  # dipakai untuk header X-Repo (whitelist SaaS)
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        # --prefix RUNNER_TEMP: node_modules ditaruh sejajar dengan ai_agent.mjs
+        # agar ESM resolver Node menemukannya (script memang sengaja di luar repo)
+        run: npm install --prefix "$RUNNER_TEMP" axios @actions/core @actions/github
+
+      - name: Run AI Agent
+        run: |
+          # Script ditulis ke RUNNER_TEMP agar TIDAK ikut ter-commit ke repo
+          cat << 'EOF' > "$RUNNER_TEMP/ai_agent.mjs"
+          import axios from 'axios';
+          import * as github from '@actions/github';
+          import * as core from '@actions/core';
+          import fs from 'fs';
+          import path from 'path';
+          import { execSync } from 'child_process';
+
+          const REPO_ROOT = process.cwd();
+          const MAX_CONTEXT_BYTES = 80000; // budget konteks kode untuk AI
+
+          function sh(cmd) {
+            return execSync(cmd, { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+          }
+
+          // JSON extractor toleran: buang markdown fence, atau ambil substring { ... }
+          function extractJSON(raw) {
+            let t = String(raw).trim()
+              .replace(/^```json\s*/i, '')
+              .replace(/^```\s*/, '')
+              .replace(/\s*```$/, '');
+            try { return JSON.parse(t); } catch { /* lanjut ke ekstraksi */ }
+            const s = t.indexOf('{');
+            const e = t.lastIndexOf('}');
+            if (s !== -1 && e > s) return JSON.parse(t.slice(s, e + 1));
+            throw new Error('AI tidak mengembalikan JSON valid');
+          }
+
+          // Tolak path traversal (../, absolute path)
+          function safePath(p) {
+            const n = path.normalize(String(p)).replace(/^(\.\.(\/|\\|$))+/, '');
+            if (!n || n === '.' || n.startsWith('..') || path.isAbsolute(n)) {
+              throw new Error(`Path tidak aman, dilewati: ${p}`);
+            }
+            return n;
+          }
+
+          // Bangun konteks repo: struktur file + isi file (budget 80KB)
+          function buildRepoContext() {
+            let files = [];
+            try {
+              files = sh('git ls-files').split('\n').map(f => f.trim()).filter(Boolean);
+            } catch { files = []; }
+            // .github/workflows DIKECUALIKAN: berisi license key (sk_...) hasil inject — jangan sampai ke upstream AI.
+            const SKIP = [/package-lock\.json$/, /yarn\.lock$/, /\.min\.js$/, /\.github\/workflows\/.*\.ya?ml$/, /\.(png|jpe?g|gif|ico|mp4|zip|tar\.gz|woff2?)$/i];
+            const redactSecrets = (t) => t.replace(/sk_[a-f0-9]{16,}/gi, 'sk_[REDACTED]');
+            const tree = files.join('\n');
+            let budget = MAX_CONTEXT_BYTES;
+            const parts = [];
+            for (const f of files) {
+              if (budget <= 0) break;
+              if (SKIP.some(rx => rx.test(f))) continue;
+              let content;
+              try {
+                const full = path.join(REPO_ROOT, f);
+                const st = fs.statSync(full);
+                if (!st.isFile() || st.size > 40000) continue;
+                content = fs.readFileSync(full, 'utf8');
+              } catch { continue; }
+              if (content.includes('\0')) continue; // binary, lewati
+              const chunk = `\n\n===== FILE: ${f} =====\n${redactSecrets(content).slice(0, budget)}`;
+              parts.push(chunk);
+              budget -= chunk.length;
+            }
+            return { tree, contents: parts.join(''), truncated: budget <= 0 };
+          }
+
+          // Tag release berikutnya: bump patch dari release terakhir (v1.2.3 -> v1.2.4)
+          // Bump patch lokal: v1.2.3 -> v1.2.4
+          function bumpPatch(tag) {
+            const m = String(tag || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
+            if (m) return `v${m[1]}.${m[2]}.${parseInt(m[3], 10) + 1}`;
+            return 'v1.0.0';
+          }
+
+          // Panggil Worker Agent API — SEMUA mutasi GitHub (commit, release,
+          // komentar issue, tutup issue) dikerjakan server SaaS dengan PAT
+          // IKBAL-rgb. Workflow ini TIDAK PERNAH memegang token GitHub.
+          // Auth: license key + header X-Repo (sama seperti proxy AI).
+          async function agentCall(apiPath, body, method = 'POST') {
+            const base = String(process.env.AI_ENDPOINT).replace(/\/v1\/chat\/completions$/, '');
+            const r = await axios({
+              method,
+              url: base + apiPath,
+              data: method === 'GET' ? undefined : body,
+              headers: {
+                'Authorization': `Bearer ${process.env.AI_API_KEY}`,
+                'X-Repo': process.env.GITHUB_REPO,
+                'Content-Type': 'application/json'
+              },
+              timeout: 120000
+            });
+            return r.data;
+          }
+
+          // Tambah entri ke CHANGELOG.md (terbaru di atas)
+          function updateChangelog(explanation, files) {
+            const p = path.join(REPO_ROOT, 'CHANGELOG.md');
+            const date = new Date().toISOString().slice(0, 10);
+            const entry = `## ${date} — ${explanation}\n\n${files.map(f => `- \`${f}\``).join('\n')}\n`;
+            let head = '# Changelog\n\n';
+            let rest = '';
+            try {
+              const cur = fs.readFileSync(p, 'utf8');
+              const nl = cur.indexOf('\n');
+              if (cur.startsWith('#') && nl !== -1) {
+                head = cur.slice(0, nl + 1) + '\n';
+                rest = cur.slice(nl + 1).replace(/^\n+/, '');
+              } else if (!cur.startsWith('#')) {
+                rest = cur;
+              }
+            } catch { /* file belum ada, buat baru */ }
+            fs.writeFileSync(p, head + entry + '\n' + rest, 'utf8');
+            console.log('CHANGELOG.md diperbarui.');
+          }
+
+          async function run() {
+            const context = github.context;
+            const apiKey = process.env.AI_API_KEY;
+            if (!apiKey) throw new Error('AI_API_KEY belum diisi — file ini harus dipasang via dashboard SaaS');
+
+            const isIssueEvent = context.eventName === 'issues' || context.eventName === 'issue_comment';
+            const isPR = !!(context.payload.issue && context.payload.issue.pull_request);
+
+            // Anti-loop: balasan bot selalu diawali "### 🤖". Jika komentar pemicu adalah
+            // balasan bot sendiri, stop di sini (exit 0) — jangan panggil AI / kirim komentar baru.
+            // Deteksi ISI (bukan nama akun) agar perintah user dari akun AunuPivots/IKBAL-rgb tetap jalan.
+            if (context.eventName === 'issue_comment') {
+              const trigBody = String((context.payload.comment && context.payload.comment.body) || '');
+              if (trigBody.startsWith('### 🤖')) {
+                console.log('Komentar pemicu adalah balasan bot sendiri — skip agar tidak loop.');
+                process.exit(0);
+              }
+            }
+
+            // ===== KUSTOMISASI: sesuaikan deskripsi project & aturan brand di bawah =====
+            const systemPrompt = `Anda adalah AI senior developer untuk project ini. Pelajari stack & struktur repo dari konteks yang diberikan, lalu analisis kode, perbaiki bug, optimasi, atau implementasi fitur sesuai permintaan.
+            Tugas: analisis kode, perbaiki bug, optimasi, atau implementasi fitur.
+
+            ATURAN KERAS:
+            1. Respons HANYA JSON valid, tanpa markdown fence, tanpa teks tambahan.
+            2. Format: { "explanation": "penjelasan singkat (Indonesia)", "files_to_update": [ { "path": "relatif/dari/repo", "content": "isi LENGKAP file" } ], "should_release": true/false, "release_notes": "..." }
+            3. "content" harus isi file UTUH, bukan diff/potongan.
+            4. Perubahan minimal dan aman. JANGAN hapus file, JANGAN tulis secret/key ke kode, JANGAN ubah workflow CI.
+            5. Jika tidak ada yang perlu diubah, kembalikan "files_to_update": [].
+            6. "should_release": true HANYA jika ada perubahan yang terlihat user (fitur/fix penting). Jangan release untuk refactor kecil.
+            7. BRANDING (sesuaikan dengan project-mu): jika ada nama brand / footer wajib, pertahankan di setiap output yang terlihat user. Contoh: "footer WAJIB bertuliskan NCHMPK Team".
+            8. UI HARUS KEREN: setiap halaman/komponen baru atau yang diperbaiki HARUS modern, rapi, dan responsif mobile-first — JANGAN buat tampilan polos/membosankan.
+            9. JANGAN PERNAH memotong JSON di tengah. Jika banyak file perlu diubah, dahulukan yang terpenting (maks 3 file per respons) — lebih baik sedikit file yang lengkap daripada banyak yang terpotong.`;
+
+            let userPrompt = '';
+            if (isIssueEvent) {
+              const issue = context.payload.issue;
+              userPrompt = `Ada laporan/permintaan dari GitHub Issue.\nJudul: ${issue.title}\nDeskripsi: ${issue.body || '(kosong)'}`;
+              if (context.eventName === 'issue_comment') {
+                userPrompt += `\nKomentar tambahan: ${context.payload.comment.body}`;
+              }
+              if (isPR) {
+                userPrompt += `\n\nCATATAN: ini komentar pada Pull Request — JANGAN ubah file apa pun, cukup berikan analisis/jawaban. Kembalikan files_to_update kosong.`;
+              } else {
+                const ctx = buildRepoContext();
+                userPrompt += `\n\nStruktur file repo:\n${ctx.tree}\n${ctx.contents}\n\nLakukan auto-fix jika ini bug, atau implementasikan jika ini permintaan fitur.`;
+              }
+            } else {
+              const ctx = buildRepoContext();
+              const manual = (context.payload.inputs && context.payload.inputs.instruction || '').trim();
+              userPrompt = `Ini pemindaian otomatis terjadwal untuk project ini. `
+                + `Periksa kode berikut, cari bug nyata, inkonsistensi, atau optimasi yang bermakna. `
+                + `Jangan mengarang masalah — jika kode sudah baik, kembalikan files_to_update kosong.`
+                + (manual ? `\nInstruksi manual: ${manual}` : '')
+                + `\n\nStruktur file repo:\n${ctx.tree}\n${ctx.contents}`;
+            }
+
+            // Panggil AI dengan retry: jika respons bukan JSON valid, minta ulang (maks 3x)
+            async function callAI(messages, attempt = 1) {
+              console.log(`Menghubungi AI endpoint... (percobaan ${attempt})`);
+              const resp = await axios.post(process.env.AI_ENDPOINT, {
+                model: process.env.AI_MODEL || 'mold',
+                response_format: { type: 'json_object' },
+                temperature: 0.3,
+                max_tokens: parseInt(process.env.AI_MAX_TOKENS || '16000', 10),
+                messages
+              }, {
+                headers: { 'Authorization': `Bearer ${apiKey}`, 'X-Repo': process.env.GITHUB_REPO, 'Content-Type': 'application/json' },
+                timeout: 180000
+              });
+              const choice = resp.data && resp.data.choices && resp.data.choices[0];
+              if (!choice || !choice.message || typeof choice.message.content !== 'string') {
+                throw new Error('Endpoint tidak mengembalikan format chat completion valid: ' + JSON.stringify(resp.data).slice(0, 500));
+              }
+              const raw = choice.message.content;
+              try {
+                return extractJSON(raw);
+              } catch {
+                const truncated = !raw.trim().endsWith('}');
+                console.log(`Percobaan ${attempt} gagal parse${truncated ? ' (respons TERPOTONG)' : ''}. Cuplikan respons AI:\n${raw.slice(0, 1500)}`);
+                if (attempt >= 3) throw new Error('AI tidak mengembalikan JSON valid setelah 3 percobaan');
+                const fixMsg = truncated
+                  ? 'Respons di atas TERPOTONG karena terlalu panjang. Ulangi dengan LEBIH SEDIKIT file (maks 2 file terpenting saja), tapi setiap file HARUS lengkap dan JSON harus valid sampai kurung kurawal tutup terakhir. Tanpa teks lain, tanpa markdown fence.'
+                  : 'Respons di atas BUKAN JSON valid. Ulangi SEKARANG hanya dengan JSON mentah: tanpa teks pembuka/penutup, tanpa markdown fence.';
+                console.log('Mencoba lagi...');
+                return callAI([
+                  ...messages,
+                  { role: 'assistant', content: raw.slice(0, 4000) },
+                  { role: 'user', content: fixMsg }
+                ], attempt + 1);
+              }
+            }
+
+            // Pre-flight: pastikan bot punya akses tulis SEBELUM panggil AI.
+            // Gagal di sini = gagal cepat tanpa membuang token/kuota AI.
+            let botName = 'AunuWise';
+            try {
+              const chk = await agentCall('/v1/agent/check-access', {}, 'GET');
+              if (chk && chk.bot && chk.bot.display_name) botName = chk.bot.display_name;
+              console.log(`Pre-flight OK — akses tulis ${botName} terkonfirmasi. Lanjut ke AI.`);
+            } catch (e) {
+              const msg = (e.response && e.response.data && e.response.data.error) || e.message;
+              throw new Error(`Pre-flight gagal, AI tidak dipanggil (hemat token): ${msg}`);
+            }
+
+            const aiData = await callAI([
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ]);
+            console.log('AI response parsed OK:', aiData.explanation);
+
+            // 1. Tulis file + CHANGELOG, lalu commit VIA WORKER (dilewati untuk komentar PR).
+            //    Tidak ada git push / token GitHub di sini — worker yang commit pakai PAT IKBAL-rgb.
+            let didCommit = false;
+            const updates = (aiData.files_to_update || []).filter(f => f && f.path && typeof f.content === 'string');
+            if (updates.length > 0 && !isPR) {
+              const written = [];
+              for (const f of updates) {
+                let p;
+                try {
+                  p = safePath(f.path);
+                } catch (e) {
+                  console.warn(`Lewati file tidak aman: ${f.path} (${e.message})`);
+                  continue;
+                }
+                fs.mkdirSync(path.dirname(path.join(REPO_ROOT, p)), { recursive: true });
+                fs.writeFileSync(path.join(REPO_ROOT, p), f.content, 'utf8');
+                written.push(p);
+                console.log(`Ditulis: ${p}`);
+              }
+              const explanation = String(aiData.explanation || 'Perbaikan otomatis');
+              updateChangelog(explanation, written); // changelog ikut commit yang sama
+              // Porcelain v1 = 'XY<spasi>path' (2 kolom status fixed-width). JANGAN trim() leading —
+              // ' M config.js'.trim().slice(3) = 'onfig.js' (huruf pertama hilang!) → file tak terbaca → commit skip.
+              const changed = sh('git status --porcelain').split('\n').map(l => l.replace(/\s+$/, '')).filter(l => l.trim().length > 2);
+              if (changed.length === 0) {
+                console.log('Tidak ada perubahan aktual — skip commit.');
+              } else {
+                const files = [];
+                const seen = new Set();
+                let totalBytes = 0;
+                const MAX_FILE_BYTES = 200000, MAX_TOTAL_BYTES = 400000;
+                for (const line of changed) {
+                  let cp = line.slice(3);
+                  const arrow = cp.indexOf(' -> ');
+                  if (arrow !== -1) cp = cp.slice(arrow + 4); // handle rename
+                  cp = cp.replace(/^"(.*)"$/, '$1');
+                  if (!cp || seen.has(cp)) continue;
+                  seen.add(cp);
+                  const full = path.join(REPO_ROOT, cp);
+                  try {
+                    const st = fs.statSync(full);
+                    if (!st.isFile()) continue;
+                    if (st.size > MAX_FILE_BYTES) { console.warn(`Lewati (terlalu besar): ${cp}`); continue; }
+                    if (totalBytes + st.size > MAX_TOTAL_BYTES) { console.warn(`Batas total payload tercapai — sisa file dilewati.`); break; }
+                    const content = fs.readFileSync(full, 'utf8');
+                    totalBytes += Buffer.byteLength(content);
+                    files.push({ path: cp, content });
+                  } catch { /* file terhapus — AI dilarang menghapus, lewati */ }
+                }
+                if (files.length === 0) {
+                  console.log('Tidak ada file valid untuk di-commit — skip.');
+                } else {
+                  const issueRef = isIssueEvent ? ` (#${context.payload.issue.number})` : '';
+                  const msg = `🤖 ${botName} Auto-Fix${issueRef}: ${explanation.slice(0, 120)}`;
+                  const branch = process.env.GITHUB_REF_NAME || 'main';
+                  const cres = await agentCall('/v1/agent/commit', { branch, message: msg, files });
+                  didCommit = true;
+                  console.log('Commit via worker berhasil:', cres.sha || 'ok');
+                }
+              }
+            } else if (updates.length > 0 && isPR) {
+              console.log('Komentar PR: file tidak diubah, hanya analisis.');
+            } else {
+              console.log('AI tidak meminta perubahan file.');
+            }
+
+            // 2. Balas issue/komentar + tandai closed jika sudah selesai (via worker, identitas IKBAL-rgb)
+            if (isIssueEvent) {
+              const issue_number = context.payload.issue.number;
+              let ibody = `### 🤖 ${botName} Bot Report\n\n${aiData.explanation || 'Dianalisis.'}\n\n`;
+              if (didCommit) {
+                ibody += `**File yang diperbarui:**\n` + updates.map(f => `- \`${safePath(f.path)}\``).join('\n') + `\n- \`CHANGELOG.md\``;
+              } else {
+                ibody += `*Tidak ada file yang diubah.*`;
+              }
+              ibody += `\n\n---\n*🤖 Ditenagai ${botName} — AunuCore*`;
+              await agentCall('/v1/agent/comment', { issue_number, body: ibody });
+              console.log('Komentar balasan terkirim via worker.');
+              if (didCommit && !isPR) {
+                await agentCall('/v1/agent/close-issue', { issue_number });
+                console.log('Issue ditandai closed.');
+              }
+            }
+
+            // 3. Release via worker: bootstrap v1.0.0 jika belum ada release sama sekali,
+            //    selebihnya hanya jika ada commit baru & AI merekomendasikan
+            const relInfo = await agentCall('/v1/agent/release-info', {}, 'GET');
+            if (!relInfo.has_any) {
+              await agentCall('/v1/agent/release', {
+                tag_name: 'v1.0.0',
+                name: 'Release v1.0.0 - Initial',
+                body: `Rilis perdana otomatis oleh ${botName} (AunuCore).`
+              });
+              console.log('Rilis perdana v1.0.0 langsung dibuat.');
+            } else if (aiData.should_release === true && didCommit) {
+              const tag = bumpPatch(relInfo.latest_tag);
+              await agentCall('/v1/agent/release', {
+                tag_name: tag,
+                name: `Release ${tag} - ${botName}`,
+                body: aiData.release_notes || `Otomatis di-generate oleh ${botName}.`
+              });
+              console.log(`Release baru dibuat: ${tag}`);
+            } else {
+              console.log('Skip release.');
+            }
+          }
+
+          run().catch(err => {
+            console.error('Error:', err.response ? JSON.stringify(err.response.data) : err.message);
+            core.setFailed(err.message);
+          });
+          EOF
+
+          node "$RUNNER_TEMP/ai_agent.mjs"
