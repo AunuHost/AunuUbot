@@ -1,4 +1,6 @@
 import asyncio
+import glob
+import os
 import signal
 import tornado.ioloop
 import tornado.platform.asyncio
@@ -15,6 +17,16 @@ async def shutdown(sig, loop):
     loop.stop()
 
 
+async def _cleanup_sessions():
+    """Remove only pyrogram .session and .session-journal files safely."""
+    for pattern in ("*.session", "*.session-journal"):
+        for f in glob.glob(pattern):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
+
 async def main():
     await bot.start()
     for _ubot in await get_userbots():
@@ -27,7 +39,7 @@ async def main():
         except Exception:
             await remove_ubot(int(_ubot["name"]))
             print(f"[\u026a\u0274\u0493\u1d0f]: {int(_ubot['name'])} \u1d03\u1d07\u0280\u029c\u1d00s\u026a\u029f \u1d05\u026a \u029c\u1d00\u1d18\u1d1c s")
-    await bash("rm -rf *session*")
+    await _cleanup_sessions()
     await asyncio.gather(loadPlugins(), installPeer(), expiredUserbots())
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()

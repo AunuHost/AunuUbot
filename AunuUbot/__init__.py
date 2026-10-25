@@ -9,6 +9,7 @@ import sys
 
 uvloop.install()
 
+# ponytail: asyncio.get_event_loop() deprecated 3.12+; use get_running_loop inside async or new_event_loop
 try:
     asyncio.get_event_loop()
 except RuntimeError:

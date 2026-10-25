@@ -17,7 +17,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
 OWNER_ID = int(os.getenv("OWNER_ID", "8565893997"))
 
-BLACKLIST_CHAT = list(map(int, os.getenv("BLACKLIST_CHAT", "").split()))
+_bl_raw = os.getenv("BLACKLIST_CHAT", "").strip()
+BLACKLIST_CHAT = list(map(int, _bl_raw.split())) if _bl_raw else []
 
 RMBG_API = os.getenv("RMBG_API", "a6qxsmMJ3CsNo7HyxuKGsP1o")
 
