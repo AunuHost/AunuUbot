@@ -19,8 +19,10 @@ async def loadPlugins():
         if module_name:
             HELP_COMMANDS[module_name] = imported_module
     print(f"[🤖 @{bot.me.username} 🤖] [💠 TELAH BERHASIL DIAKTIFKAN! 💠]")
-    await bot.send_message(OWNER_ID, 
-       f"""                    
+    try:
+        await bot.send_message(
+            OWNER_ID,
+            f"""                    
 <b>🤖 {bot.me.mention} ʙᴇʀʜᴀsɪʟ ᴅɪᴀᴋᴛɪꜰᴋᴀɴ</b>
 
 <b>📁 ᴍᴏᴅᴜʟᴇs: {len(HELP_COMMANDS)}</b>
@@ -32,15 +34,18 @@ async def loadPlugins():
 
 <b>AunuUbot</b>
 """,
-   reply_markup=InlineKeyboardMarkup(
-            [
+            reply_markup=InlineKeyboardMarkup(
                 [
-                    InlineKeyboardButton("🤖 ʟɪꜱᴛ ᴜꜱᴇʀʙᴏᴛ 🤖", callback_data="cek_ubot"),
-                ],
-            ]
-        ),
-                          )
-    
+                    [
+                        InlineKeyboardButton("🤖 ʟɪꜱᴛ ᴜꜱᴇʀʙᴏᴛ 🤖", callback_data="cek_ubot"),
+                    ],
+                ]
+            ),
+        )
+    except Exception as e:
+        print(f"[WARNING] Gagal mengirim pesan startup ke OWNER_ID: {e}")
+
+
 @PY.CALLBACK("0_cls")
 async def _(client, callback_query):
     await callback_query.message.delete()

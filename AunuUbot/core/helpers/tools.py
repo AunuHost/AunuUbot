@@ -35,7 +35,7 @@ def unpackInlineMessage(inline_message_id: str):
     dc_id, message_id, chat_id, query_id = unpack(
         "<iiiq",
         urlsafe_b64decode(
-            inline_message_id + "=" * (len(inline_message_id) % 4),
+            inline_message_id + "=" * (-len(inline_message_id) % 4),
         ),
     )
     temp = {
@@ -136,6 +136,7 @@ async def list_admins(message):
             async for member in message._client.get_chat_members(
                 message.chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS
             )
+            if member.user
         ],
     }
     return admins_in_chat[message.chat.id]["data"]
