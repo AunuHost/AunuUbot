@@ -1,12 +1,14 @@
-from asyncio import get_event_loop
+import asyncio
 from functools import partial
 
 from yt_dlp import YoutubeDL
 from AunuUbot.config import USER_GROUP
 
 
-def run_sync(func, *args, **kwargs):
-    return get_event_loop().run_in_executor(None, partial(func, *args, **kwargs))
+async def run_sync(func, *args, **kwargs):
+    # ponytail: get_event_loop() deprecated 3.12+; use get_running_loop() inside async context
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, partial(func, *args, **kwargs))
 
 
 async def YoutubeDownload(url, as_video=False):

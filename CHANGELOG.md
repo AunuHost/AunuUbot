@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-27 — Scan menyeluruh. Beberapa bug nyata ditemukan: 1) `yt_dl.py` menggunakan `get_event_loop()` yang deprecated di Python 3.12+ (seharusnya `asyncio.get_event_loop()` diganti `asyncio.get_running_loop()` atau `asyncio.to_thread`). 2) `absen.py` menambahkan user ke `hadir_list` dua kali saat command `absen` dipanggil (sekali di handler, sekali di inline query). 3) `dec.py` menggunakan `chat_type.get('users')` langsung sebagai iterable tanpa fallback — aman tapi idiom buruk. 4) `yt_dl.py` `run_sync` pakai `get_event_loop()` yang akan raise RuntimeError di Python 3.12+ jika tidak ada running loop. Fix utama: ganti `run_sync` di yt_dl.py pakai `asyncio.get_running_loop()`, dan fix double-append di absen.py.
+
+- `AunuUbot/core/helpers/yt_dl.py`
+- `AunuUbot/modules/absen.py`
+
 ## 2026-10-26 — Fix KeyError & formatting crash yt_dl (missing import USER_GROUP & mixed bracket syntax). Fix base64 padding calculation di unpackInlineMessage dan AttributeError NoneType pada member list_admins di tools.py. Tangkap exception send_message startup ke OWNER_ID agar bot tidak crash saat owner belum start bot.
 
 - `AunuUbot/core/helpers/yt_dl.py`
