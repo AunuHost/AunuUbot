@@ -7,11 +7,18 @@ async def get_time(seconds):
     count = 0
     up_time = ""
     time_list = []
-    time_suffix_list = ["s", "ᴍ", "ʜ", "ᴅ"]
+    time_suffix_list = ["s", "\u1d0d", "\u029c", "\u1d05"]
 
     while count < 4:
         count += 1
-        remainder, result = divmod(seconds, 60) if count < 3 else divmod(seconds, 24)
+        if count < 3:
+            remainder, result = divmod(seconds, 60)
+        elif count == 3:
+            remainder, result = divmod(seconds, 24)
+        else:
+            # count == 4: seconds is now in days, no further division needed
+            remainder = 0
+            result = seconds
         if seconds == 0 and remainder == 0:
             break
         time_list.append(int(result))

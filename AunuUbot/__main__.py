@@ -28,6 +28,9 @@ async def _cleanup_sessions():
 
 
 async def main():
+    # Initialize aiosession inside async context
+    await get_aiosession()
+
     await bot.start()
     for _ubot in await get_userbots():
         ubot_ = Ubot(**_ubot)
@@ -57,7 +60,17 @@ async def main():
     except asyncio.CancelledError:
         pass
     finally:
-        await bot.stop()
+        # Cleanup: stop all ubot instances, close aiosession, stop bot
+        for ub in list(ubot._ubot):
+            try:
+                await ub.stop()
+            except Exception:
+                pass
+        await close_aiosession()
+        try:
+            await bot.stop()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

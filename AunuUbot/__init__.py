@@ -44,7 +44,23 @@ logger.addHandler(stream_handler)
 logger.addHandler(connection_handler)
 logging.getLogger("pytgcalls").setLevel(logging.WARNING)
 
-aiosession = ClientSession()
+# Lazy aiosession: created inside async context to avoid aiohttp warnings on Python 3.10+
+aiosession = None
+
+
+async def get_aiosession():
+    global aiosession
+    if aiosession is None or aiosession.closed:
+        aiosession = ClientSession()
+    return aiosession
+
+
+async def close_aiosession():
+    global aiosession
+    if aiosession and not aiosession.closed:
+        await aiosession.close()
+        aiosession = None
+
 
 class Bot(Client):
     def __init__(self, **kwargs):

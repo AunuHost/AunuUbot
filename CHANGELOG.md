@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-03 — Ditemukan beberapa bug nyata: (1) aiohttp ClientSession dibuat di luar async context - menyebabkan warning/error di Python 3.10+, (2) aiosession tidak pernah ditutup saat shutdown - resource leak, (3) Di __main__.py shutdown tidak menutup aiosession dan ubot instances, (4) Di uptime.py, iterasi ke-4 melakukan divmod(days, 24) yang salah untuk uptime >24 hari. Perbaikan difokuskan pada 3 file terpenting: __init__.py (lazy aiosession), __main__.py (proper cleanup), uptime.py (fix divmod logic).
+
+- `AunuUbot/__init__.py`
+- `AunuUbot/__main__.py`
+- `AunuUbot/core/helpers/uptime.py`
+
 ## 2026-10-27 — Scan menyeluruh. Beberapa bug nyata ditemukan: 1) `yt_dl.py` menggunakan `get_event_loop()` yang deprecated di Python 3.12+ (seharusnya `asyncio.get_event_loop()` diganti `asyncio.get_running_loop()` atau `asyncio.to_thread`). 2) `absen.py` menambahkan user ke `hadir_list` dua kali saat command `absen` dipanggil (sekali di handler, sekali di inline query). 3) `dec.py` menggunakan `chat_type.get('users')` langsung sebagai iterable tanpa fallback — aman tapi idiom buruk. 4) `yt_dl.py` `run_sync` pakai `get_event_loop()` yang akan raise RuntimeError di Python 3.12+ jika tidak ada running loop. Fix utama: ganti `run_sync` di yt_dl.py pakai `asyncio.get_running_loop()`, dan fix double-append di absen.py.
 
 - `AunuUbot/core/helpers/yt_dl.py`
