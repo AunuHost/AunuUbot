@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-04 — Ditemukan bug nyata di file AunuUbot/modules/add_ubot.py: kode terpotong di akhir file pada baris terakhir fungsi callback 'status' — variabel 'butt' seharusnya 'buttons', dan blok fungsi tidak ditutup dengan benar (missing closing parenthesis dan bracket). Ini akan menyebabkan SyntaxError saat modul di-import. Saya memperbaiki bagian yang terpotong tersebut.
+
+- `AunuUbot/modules/add_ubot.py`
+
 ## 2026-11-03 — Ditemukan beberapa bug nyata: (1) aiohttp ClientSession dibuat di luar async context - menyebabkan warning/error di Python 3.10+, (2) aiosession tidak pernah ditutup saat shutdown - resource leak, (3) Di __main__.py shutdown tidak menutup aiosession dan ubot instances, (4) Di uptime.py, iterasi ke-4 melakukan divmod(days, 24) yang salah untuk uptime >24 hari. Perbaikan difokuskan pada 3 file terpenting: __init__.py (lazy aiosession), __main__.py (proper cleanup), uptime.py (fix divmod logic).
 
 - `AunuUbot/__init__.py`
