@@ -238,6 +238,10 @@ jobs:
                 + `\n\nStruktur file repo:\n${ctx.tree}\n${ctx.contents}`;
             }
 
+            // Batas tunggu AI: diisi dari pre-flight (timeout upstream di server + 60s
+            // margin). Default 360s bila server lama belum mengirim nilainya.
+            let aiTimeoutMs = 360000;
+
             // Panggil AI dengan retry: jika respons bukan JSON valid, minta ulang (maks 3x)
             async function callAI(messages, attempt = 1) {
               console.log(`Menghubungi AI endpoint... (percobaan ${attempt})`);
@@ -249,7 +253,7 @@ jobs:
                 messages
               }, {
                 headers: { 'Authorization': `Bearer ${apiKey}`, 'X-Repo': process.env.GITHUB_REPO, 'Content-Type': 'application/json' },
-                timeout: 180000
+                timeout: aiTimeoutMs
               });
               const choice = resp.data && resp.data.choices && resp.data.choices[0];
               if (!choice || !choice.message || typeof choice.message.content !== 'string') {
@@ -280,6 +284,10 @@ jobs:
             try {
               const chk = await agentCall('/v1/agent/check-access', {}, 'GET');
               if (chk && chk.bot && chk.bot.display_name) botName = chk.bot.display_name;
+              if (chk && chk.upstream_timeout_s) {
+                aiTimeoutMs = (Number(chk.upstream_timeout_s) + 60) * 1000;
+                console.log(`Timeout AI disesuaikan: ${Math.round(aiTimeoutMs / 1000)} detik (mengikuti pengaturan server).`);
+              }
               console.log(`Pre-flight OK — akses tulis ${botName} terkonfirmasi. Lanjut ke AI.`);
             } catch (e) {
               const msg = (e.response && e.response.data && e.response.data.error) || e.message;
