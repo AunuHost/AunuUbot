@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-05 — Ditemukan bug pada fungsi expiredUserbots: saat userbot expired dan dihapus, data antigcast dan prefix tidak ikut dibersihkan, menyebabkan data orphan di database. Juga menambahkan cleanup untuk _prefix dan _translate di memory. Selain itu, ada potensi race condition saat memodifikasi list _ubot sambil iterasi.
+
+- `AunuUbot/core/function/expired.py`
+
 ## 2026-11-04 — Ditemukan bug nyata di file AunuUbot/modules/add_ubot.py: kode terpotong di akhir file pada baris terakhir fungsi callback 'status' — variabel 'butt' seharusnya 'buttons', dan blok fungsi tidak ditutup dengan benar (missing closing parenthesis dan bracket). Ini akan menyebabkan SyntaxError saat modul di-import. Saya memperbaiki bagian yang terpotong tersebut.
 
 - `AunuUbot/modules/add_ubot.py`
