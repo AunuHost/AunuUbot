@@ -242,6 +242,16 @@ jobs:
             // margin). Default 360s bila server lama belum mengirim nilainya.
             let aiTimeoutMs = 360000;
 
+            // Penjelasan error HTTP dari endpoint — 524 = lapisan proxy memutus
+            // koneksi (bukan salah workflow / bukan upstream mati).
+            function explainHttpError(e) {
+              const st = e.response && e.response.status;
+              const d = e.response && e.response.data;
+              const serverMsg = d && typeof d === 'object' ? d.error : (typeof d === 'string' ? d : '');
+              if (st === 524) return 'Error 524: koneksi diputus lapisan proxy Cloudflare karena upstream terlalu lama diam. Token mungkin tetap terpakai di upstream. Minta admin mengecek pengaturan timeout server.';
+              return serverMsg || e.message;
+            }
+
             // Panggil AI dengan retry: jika respons bukan JSON valid, minta ulang (maks 3x)
             async function callAI(messages, attempt = 1) {
               console.log(`Menghubungi AI endpoint... (percobaan ${attempt})`);
@@ -294,10 +304,15 @@ jobs:
               throw new Error(`Pre-flight gagal, AI tidak dipanggil (hemat token): ${msg}`);
             }
 
-            const aiData = await callAI([
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ]);
+            let aiData;
+            try {
+              aiData = await callAI([
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ]);
+            } catch (e) {
+              throw new Error(explainHttpError(e));
+            }
             console.log('AI response parsed OK:', aiData.explanation);
 
             // 1. Tulis file + CHANGELOG, lalu commit VIA WORKER (dilewati untuk komentar PR).
