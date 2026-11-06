@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-06 — Ditemukan bug nyata di file AunuUbot/modules/add_ubot.py: fungsi callback 'status' terpotong di tengah (ada 'but' yang tidak lengkap di akhir file), ini akan menyebabkan SyntaxError saat modul di-import. Saya memperbaiki dengan menyelesaikan fungsi tersebut secara minimal dan aman. Tidak ada bug kritis lain yang ditemukan di file-file lainnya.
+
+- `AunuUbot/modules/add_ubot.py`
+
 ## 2026-11-05 — Ditemukan bug pada fungsi expiredUserbots: saat userbot expired dan dihapus, data antigcast dan prefix tidak ikut dibersihkan, menyebabkan data orphan di database. Juga menambahkan cleanup untuk _prefix dan _translate di memory. Selain itu, ada potensi race condition saat memodifikasi list _ubot sambil iterasi.
 
 - `AunuUbot/core/function/expired.py`

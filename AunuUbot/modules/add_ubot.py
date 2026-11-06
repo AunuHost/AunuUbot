@@ -115,27 +115,43 @@ async def _(client, callback_query):
         )
 
 
-
 @PY.CALLBACK("status")
 async def _(client, callback_query):
     user_id = callback_query.from_user.id
     access = await get_access_flags(client, user_id)
+    label = get_access_label(access)
     if user_id in ubot._get_my_id or has_build_access(access):
         buttons = [
             [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
         ]
-        exp = await get_expired_date(user_id)
-        prefix = await get_pref(user_id)
-        waktu = exp.strftime("%d-%m-%Y") if exp else "None"
-        status = get_access_label(access)
-        if status == "free":
-            status = "premium"
-        return await callback_query.edit_message_text(
+        await callback_query.edit_message_text(
             f"""
-<blockquote>AunuHost
-  sᴛᴀᴛᴜs : {Fonts.smallcap(status)}
-  ᴘʀᴇғɪx : {prefix[0]}
-  ᴇxᴘɪʀᴇᴅ_ᴏɴ : {waktu}</b></blockquote>
+<blockquote><b>📊 sᴛᴀᴛᴜs ᴀᴋᴜɴ</b>
+
+<b>👤 ᴜsᴇʀ:</b> <a href=tg://user?id={user_id}>{callback_query.from_user.first_name}</a>
+<b>🆔 ɪᴅ:</b> <code>{user_id}</code>
+<b>🏷 ᴀᴋsᴇs:</b> <code>{label}</code>
+<b>🤖 ᴜsᴇʀʙᴏᴛ:</b> <code>{'ᴀᴋᴛɪꜰ' if user_id in ubot._get_my_id else 'ᴛɪᴅᴀᴋ ᴀᴋᴛɪꜰ'}</code></blockquote>
+
+<b>AunuUbot</b>
+""",
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+    else:
+        buttons = [
+            [InlineKeyboardButton("ᴋᴇᴍʙᴀʟɪ", callback_data=f"home {user_id}")],
+        ]
+        await callback_query.edit_message_text(
+            f"""
+<blockquote><b>📊 sᴛᴀᴛᴜs ᴀᴋᴜɴ</b>
+
+<b>👤 ᴜsᴇʀ:</b> <a href=tg://user?id={user_id}>{callback_query.from_user.first_name}</a>
+<b>🆔 ɪᴅ:</b> <code>{user_id}</code>
+<b>🏷 ᴀᴋsᴇs:</b> <code>{label}</code>
+<b>🤖 ᴜsᴇʀʙᴏᴛ:</b> <code>ᴛɪᴅᴀᴋ ᴀᴋᴛɪꜰ</code></blockquote>
+
+<b>AunuUbot</b>
 """,
             disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(buttons),
