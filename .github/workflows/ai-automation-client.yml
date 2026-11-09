@@ -140,6 +140,47 @@ jobs:
             return 'v1.0.0';
           }
 
+          // Judul release berikutnya mengikuti POLA judul release sebelumnya:
+          // hanya versinya yang diganti (tag baru tetap dari bumpPatch).
+          // Contoh: "AunuBaileys v1.0.7" + tag v1.0.8 -> "AunuBaileys v1.0.8".
+          function releaseNameFromPrevious(previous, nextTag, fallbackName) {
+            const prevName = String((previous && previous.latest_name) || '').trim();
+            if (!prevName) return fallbackName;
+            const prevTag = String((previous && previous.latest_tag) || '');
+            if (prevTag && prevName.includes(prevTag)) return prevName.split(prevTag).join(nextTag);
+            const version = prevName.match(/v?\d+\.\d+\.\d+/);
+            if (version) return prevName.replace(version[0], nextTag);
+            if (prevName.toLowerCase().includes(String(nextTag).toLowerCase())) return prevName;
+            return `${prevName} ${nextTag}`;
+          }
+
+          // Isi release: catatan dari AI adalah isinya; release sebelumnya hanya
+          // menyumbang kerangka yang aman dipertahankan — heading versi dan baris
+          // penutup proses/footer (mis. "Published to npm automatically by ...").
+          // Klaim isi lama TIDAK disalin: fakta lama bisa tidak berlaku lagi.
+          function releaseBodyFromPrevious(previous, notes, nextTag, fallback) {
+            const prevTag = String((previous && previous.latest_tag) || '');
+            const swapVersion = (text) => prevTag ? String(text || '').split(prevTag).join(nextTag) : String(text || '');
+            let body = swapVersion(String(notes || '').trim());
+            if (!body) body = swapVersion(String(fallback || '').trim());
+            if (!body) body = `Pembaruan ${nextTag}.`;
+            const prevBlocks = String((previous && previous.latest_body) || '')
+              .split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+            if (prevBlocks.length) {
+              const first = prevBlocks[0];
+              if (first.length <= 120 && (/^#{1,6}\s/.test(first) || (prevTag && first.includes(prevTag)))) {
+                const opening = swapVersion(first);
+                if (!body.startsWith(opening)) body = `${opening}\n\n${body}`;
+              }
+              const last = prevBlocks[prevBlocks.length - 1];
+              if (/^(published|released|generated|otomatis|dibuat|di-generate)\b/i.test(last)) {
+                const closing = swapVersion(last);
+                if (!body.includes(closing)) body += `\n\n${closing}`;
+              }
+            }
+            return body;
+          }
+
           // Panggil Worker Agent API — SEMUA mutasi GitHub (commit, release,
           // komentar issue, tutup issue) dikerjakan server SaaS dengan PAT
           // IKBAL-rgb. Workflow ini TIDAK PERNAH memegang token GitHub.
@@ -213,7 +254,8 @@ jobs:
             6. "should_release": true HANYA jika ada perubahan yang terlihat user (fitur/fix penting). Jangan release untuk refactor kecil.
             7. BRANDING (sesuaikan dengan project-mu): jika ada nama brand / footer wajib, pertahankan di setiap output yang terlihat user. Contoh: "footer WAJIB bertuliskan NCHMPK Team".
             8. UI HARUS KEREN: setiap halaman/komponen baru atau yang diperbaiki HARUS modern, rapi, dan responsif mobile-first — JANGAN buat tampilan polos/membosankan.
-            9. JANGAN PERNAH memotong JSON di tengah. Jika banyak file perlu diubah, dahulukan yang terpenting (maks 3 file per respons) — lebih baik sedikit file yang lengkap daripada banyak yang terpotong.`;
+            9. JANGAN PERNAH memotong JSON di tengah. Jika banyak file perlu diubah, dahulukan yang terpenting (maks 3 file per respons) — lebih baik sedikit file yang lengkap daripada banyak yang terpotong.
+            10. Jika prompt memuat FORMAT RELEASE SEBELUMNYA, tulis "release_notes" mengikuti format itu: bahasa, urutan blok, pola paragraf/bullet, tingkat detail, dan baris penutup proses/footer yang masih berlaku. JANGAN menyalin klaim/fakta lama — isi harus menjelaskan perubahan saat ini, dan nomor versi yang disebut harus versi baru.`;
 
             let userPrompt = '';
             if (isIssueEvent) {
@@ -291,6 +333,7 @@ jobs:
             // Pre-flight: pastikan bot punya akses tulis SEBELUM panggil AI.
             // Gagal di sini = gagal cepat tanpa membuang token/kuota AI.
             let botName = 'AunuWise';
+            let previousRelease = null;
             try {
               const chk = await agentCall('/v1/agent/check-access', {}, 'GET');
               if (chk && chk.bot && chk.bot.display_name) botName = chk.bot.display_name;
@@ -299,6 +342,16 @@ jobs:
                 console.log(`Timeout AI disesuaikan: ${Math.round(aiTimeoutMs / 1000)} detik (mengikuti pengaturan server).`);
               }
               console.log(`Pre-flight OK — akses tulis ${botName} terkonfirmasi. Lanjut ke AI.`);
+              // Ambil format release terakhir (judul + isi) agar release_notes AI
+              // dan judul release berikutnya mengikuti format yang sudah dipakai.
+              // Tag TIDAK dipakai sebagai format — tag baru tetap dihitung bumpPatch.
+              try {
+                previousRelease = await agentCall('/v1/agent/release-info', {}, 'GET');
+                if (previousRelease && previousRelease.has_any && (previousRelease.latest_name || previousRelease.latest_body)) {
+                  userPrompt += `\n\nFORMAT RELEASE SEBELUMNYA (ikuti sebagai format, bukan sebagai isi):\nJudul: ${String(previousRelease.latest_name || '').slice(0, 200)}\nIsi:\n${String(previousRelease.latest_body || '').slice(0, 6000)}\n\nTulis release_notes dengan bahasa, urutan blok, pola paragraf/bullet, dan tingkat detail yang sama. Pertahankan baris penutup yang bersifat proses/footer bila masih berlaku. Jangan menyalin klaim lama.`;
+                  console.log('Format release sebelumnya ditemukan — release berikutnya mengikuti format itu.');
+                }
+              } catch { previousRelease = null; }
             } catch (e) {
               const msg = (e.response && e.response.data && e.response.data.error) || e.message;
               throw new Error(`Pre-flight gagal, AI tidak dipanggil (hemat token): ${msg}`);
@@ -401,7 +454,7 @@ jobs:
 
             // 3. Release via worker: bootstrap v1.0.0 jika belum ada release sama sekali,
             //    selebihnya hanya jika ada commit baru & AI merekomendasikan
-            const relInfo = await agentCall('/v1/agent/release-info', {}, 'GET');
+            const relInfo = previousRelease || await agentCall('/v1/agent/release-info', {}, 'GET');
             if (!relInfo.has_any) {
               await agentCall('/v1/agent/release', {
                 tag_name: 'v1.0.0',
@@ -411,12 +464,14 @@ jobs:
               console.log('Rilis perdana v1.0.0 langsung dibuat.');
             } else if (aiData.should_release === true && didCommit) {
               const tag = bumpPatch(relInfo.latest_tag);
+              const releaseName = releaseNameFromPrevious(relInfo, tag, `Release ${tag} - ${botName}`);
+              const releaseBody = releaseBodyFromPrevious(relInfo, aiData.release_notes, tag, aiData.explanation);
               await agentCall('/v1/agent/release', {
                 tag_name: tag,
-                name: `Release ${tag} - ${botName}`,
-                body: aiData.release_notes || `Otomatis di-generate oleh ${botName}.`
+                name: releaseName,
+                body: releaseBody
               });
-              console.log(`Release baru dibuat: ${tag}`);
+              console.log(`Release baru dibuat: ${tag} — ${releaseName} (format mengikuti release sebelumnya)`);
             } else {
               console.log('Skip release.');
             }
