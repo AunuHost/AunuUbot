@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-09 — Bug kritis ditemukan: fungsi callback 'status' di add_ubot.py terpotong di tengah kode (`if user_id in ubot._get_my_id or h`), menyebabkan SyntaxError dan seluruh modul gagal di-import. Fungsi dilengkapi agar menampilkan status akses user (owner/admin/seller/premium/free) beserta info masa aktif userbot.
+
+- `AunuUbot/modules/add_ubot.py`
+
 ## 2026-11-06 — Ditemukan bug nyata di file AunuUbot/modules/add_ubot.py: fungsi callback 'status' terpotong di tengah (ada 'but' yang tidak lengkap di akhir file), ini akan menyebabkan SyntaxError saat modul di-import. Saya memperbaiki dengan menyelesaikan fungsi tersebut secara minimal dan aman. Tidak ada bug kritis lain yang ditemukan di file-file lainnya.
 
 - `AunuUbot/modules/add_ubot.py`
