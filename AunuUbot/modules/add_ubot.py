@@ -121,17 +121,18 @@ async def _(client, callback_query):
     access = await get_access_flags(client, user_id)
     label = get_access_label(access)
     if user_id in ubot._get_my_id or has_build_access(access):
+        is_active = user_id in ubot._get_my_id
+        status_text = "✅ ᴀᴋᴛɪꜰ" if is_active else "❌ ᴛɪᴅᴀᴋ ᴀᴋᴛɪꜰ"
         exp_date = await get_expired_date(user_id)
         if exp_date:
             exp_str = exp_date.strftime("%d-%m-%Y")
         else:
-            exp_str = "ᴛɪᴅᴀᴋ ᴅɪᴀᴛᴜʀ" if user_id == OWNER_ID else "ᴛɪᴅᴀᴋ ᴅɪᴛᴇᴍᴜᴋᴀɴ"
-        has_ubot = "✅ ᴀᴋᴛɪꜰ" if user_id in ubot._get_my_id else "❌ ᴛɪᴅᴀᴋ ᴀᴋᴛɪꜰ"
+            exp_str = "ᴛɪᴅᴀᴋ ᴅɪᴀᴛᴜʀ" if not access["owner"] else "ᴛᴀɴᴘᴀ ʙᴀᴛᴀs"
         text = (
             f"<blockquote><b>❏ sᴛᴀᴛᴜs ᴀᴋᴜɴ</b>\n"
             f"<b>├ ɪᴅ:</b> <code>{user_id}</code>\n"
             f"<b>├ ᴀᴋsᴇs:</b> <code>{label}</code>\n"
-            f"<b>├ ᴜsᴇʀʙᴏᴛ:</b> {has_ubot}\n"
+            f"<b>├ ᴜsᴇʀʙᴏᴛ:</b> {status_text}\n"
             f"<b>╰ ᴍᴀsᴀ ᴀᴋᴛɪꜰ:</b> <code>{exp_str}</code></blockquote>\n\n"
             f"<b>AunuUbot</b>"
         )
@@ -153,4 +154,4 @@ async def _(client, callback_query):
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     except Exception:
-        await callback_query.answer("ɢᴀɢᴀʟ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ sᴛᴀᴛᴜs", show_alert=True)
+        await callback_query.answer("ɢᴀɢᴀʟ ᴍᴇᴍᴜᴀᴛ sᴛᴀᴛᴜs", show_alert=True)

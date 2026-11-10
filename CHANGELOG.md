@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-10 — Bug kritis ditemukan: fungsi callback 'status' di add_ubot.py terpotong di tengah baris (`if user_id in ubot._get_my_id or h`), menyebabkan SyntaxError dan seluruh modul gagal di-import saat startup. Fungsi dilengkapi untuk menampilkan status akses user, status userbot aktif/tidak, dan informasi masa aktif dari database expired.
+
+- `AunuUbot/modules/add_ubot.py`
+
 ## 2026-11-09 — Bug kritis ditemukan: fungsi callback 'status' di add_ubot.py terpotong di tengah kode (`if user_id in ubot._get_my_id or h`), menyebabkan SyntaxError dan seluruh modul gagal di-import. Fungsi dilengkapi agar menampilkan status akses user (owner/admin/seller/premium/free) beserta info masa aktif userbot.
 
 - `AunuUbot/modules/add_ubot.py`
