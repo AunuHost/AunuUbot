@@ -307,6 +307,14 @@ jobs:
                 headers: { 'Authorization': `Bearer ${apiKey}`, 'X-Repo': process.env.GITHUB_REPO, 'Content-Type': 'application/json' },
                 timeout: aiTimeoutMs
               });
+              // Endpoint kini selalu membalas JSON terstruktur: sukses berisi
+              // choices, gagal berisi { error } (termasuk bila respons dikirim
+              // via streaming keep-alive dengan status 200). Tampilkan pesan
+              // aslinya — jangan tutupi dengan "format tidak valid".
+              if (resp.data && typeof resp.data === 'object' && resp.data.error) {
+                const em = typeof resp.data.error === 'string' ? resp.data.error : JSON.stringify(resp.data.error);
+                throw new Error('Endpoint AI error: ' + String(em).slice(0, 500));
+              }
               const choice = resp.data && resp.data.choices && resp.data.choices[0];
               if (!choice || !choice.message || typeof choice.message.content !== 'string') {
                 throw new Error('Endpoint tidak mengembalikan format chat completion valid: ' + JSON.stringify(resp.data).slice(0, 500));
